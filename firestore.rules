@@ -1,0 +1,156 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ────────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() &&
+             request.auth.token.get('role', 'free') == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isCounselor() {
+      return hasRole('counselor') || isAdmin();
+    }
+
+    function isPremium() {
+      return hasRole('premium') || isCounselor() || isAdmin();
+    }
+
+    // ─── Users ──────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isCounselor() || isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ─── Journal Entries ────────────────────────────────────────────────────
+    match /journalEntries/{entryId} {
+      allow read: if isSignedIn() && (
+                     resource.data.userId == request.auth.uid ||
+                     isCounselor() || isAdmin() ||
+                     (exists(/databases/$(database)/documents/journalProfiles/$(resource.data.userId)) &&
+                      request.auth.uid in get(/databases/$(database)/documents/journalProfiles/$(resource.data.userId)).data.allowedViewers)
+                  );
+      allow create: if isSignedIn() &&
+                       request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() &&
+                       resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() &&
+                       resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Journal Profiles (sharing) ─────────────────────────────────────────
+    match /journalProfiles/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ─── Journal Access Requests ─────────────────────────────────────────────
+    match /journalAccessRequests/{requestId} {
+      allow read: if isSignedIn() && (
+                     resource.data.fromUid == request.auth.uid ||
+                     resource.data.toUid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+                       request.resource.data.fromUid == request.auth.uid;
+      allow update: if isSignedIn() && (
+                     resource.data.toUid == request.auth.uid ||
+                     resource.data.fromUid == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (
+                     resource.data.fromUid == request.auth.uid ||
+                     resource.data.toUid == request.auth.uid || isAdmin());
+    }
+
+    // ─── Mood Check-ins ─────────────────────────────────────────────────────
+    match /moodCheckins/{checkinId} {
+      allow read: if isSignedIn() &&
+                     (resource.data.userId == request.auth.uid || isCounselor() || isAdmin());
+      allow write: if isSignedIn() &&
+                      request.resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Recovery Trackers ──────────────────────────────────────────────────
+    match /trackers/{trackerId} {
+      allow read: if isSignedIn() &&
+                     (resource.data.userId == request.auth.uid || isCounselor() || isAdmin());
+      allow write: if isSignedIn() &&
+                      request.resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Resources ──────────────────────────────────────────────────────────
+    // Free resources readable by all signed-in users.
+    // Premium resources require premium role.
+    match /resources/{resourceId} {
+      allow read: if isSignedIn() &&
+                     (!resource.data.isPremium || isPremium());
+      allow write: if isAdmin();
+    }
+
+    // ─── Community Posts (anonymous feed) ───────────────────────────────────
+    match /communityPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       request.resource.data.userId == request.auth.uid;
+      // Only the author or an admin can delete; heartedBy toggled by any signed-in user
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() &&
+                       (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ─── Community Groups ───────────────────────────────────────────────────
+    match /communityGroups/{groupId} {
+      allow read: if isSignedIn();
+      allow create: if isCounselor() || isAdmin();
+      allow update: if isCounselor() || isAdmin();
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() &&
+                         request.resource.data.senderId == request.auth.uid;
+        allow delete: if isSignedIn() &&
+                         (resource.data.senderId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // ─── Sessions ───────────────────────────────────────────────────────────
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn() &&
+                     (resource.data.userId == request.auth.uid ||
+                      resource.data.counselorId == request.auth.uid ||
+                      isAdmin());
+      allow create: if isCounselor() || isAdmin();
+      allow update: if isSignedIn() &&
+                       (resource.data.counselorId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ─── Worksheet Responses (private user data) ─────────────────────────
+    match /worksheetResponses/{responseId} {
+      allow read, write: if isSignedIn() &&
+                            resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       request.resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Admin: deny by default unless explicitly matched ───────────────────
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

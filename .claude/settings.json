@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:archive.org)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:pixabay.com)",
+      "WebFetch(domain:orangefreesounds.com)",
+      "WebFetch(domain:commons.wikimedia.org)"
+    ]
+  }
+}

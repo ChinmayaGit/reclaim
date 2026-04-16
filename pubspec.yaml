@@ -1,0 +1,72 @@
+name: reclaim
+description: "Reclaim - Mental health and addiction recovery app"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.0
+  firebase_storage: ^12.3.0
+  firebase_messaging: ^15.1.0
+  firebase_analytics: ^11.3.0
+  firebase_crashlytics: ^4.1.0
+  firebase_remote_config: ^5.1.0
+  cloud_functions: ^5.1.0
+  google_sign_in: ^6.2.0
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Models
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+
+  # UI / Fonts
+  google_fonts: ^6.2.1
+  fl_chart: ^0.68.0
+  cached_network_image: ^3.3.1
+
+  # Media
+  image_picker: ^1.1.2
+  just_audio: ^0.9.40
+  audio_session: ^0.1.21
+  webview_flutter: ^4.10.0
+
+  # Documents
+  pdf: ^3.11.0
+  printing: ^5.13.0
+
+  # Platform
+  flutter_local_notifications: ^17.2.0
+  shared_preferences: ^2.3.0
+  url_launcher: ^6.3.0
+  path_provider: ^2.1.4
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.11
+  riverpod_generator: ^2.4.3
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/lottie/
