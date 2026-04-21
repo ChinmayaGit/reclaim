@@ -1,7 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/focus_model.dart';
 import '../data/focus_repository.dart';
+import '../data/usage_channel.dart';
+
+export '../data/usage_channel.dart' show AppUsageStat;
+export '../data/focus_model.dart'
+    show AppUsageTrackedApp, FocusSettings, snapFocusLimitMinutes;
 
 // ── Repository singleton ─────────────────────────────────────────────────────
 
@@ -22,12 +29,6 @@ class FocusNotifier extends StateNotifier<FocusSettings> {
     state = s;
     await _focusRepo.save(s);
   }
-
-  Future<void> setUsageLimit({required bool enabled, int? minutes}) =>
-      _save(state.copyWith(
-        usageLimitEnabled: enabled,
-        dailyLimitMinutes: minutes ?? state.dailyLimitMinutes,
-      ));
 
   Future<void> setSchedule({
     required bool enabled,
@@ -57,7 +58,51 @@ class FocusNotifier extends StateNotifier<FocusSettings> {
     ));
   }
 
-  /// Snooze all locks for [minutes] minutes (soft bypass).
+  /// Add to tracked list immediately (picker switch on).
+  Future<void> addTrackedApp({
+    required String packageName,
+    required String displayName,
+  }) async {
+    if (state.trackedAppUsage.any((e) => e.packageName == packageName)) {
+      return;
+    }
+    await _save(state.copyWith(trackedAppUsage: [
+      ...state.trackedAppUsage,
+      AppUsageTrackedApp(
+        packageName: packageName,
+        displayName: displayName,
+        limitMinutes: snapFocusLimitMinutes(60),
+        limitEnabled: false,
+      ),
+    ]));
+  }
+
+  Future<void> removeMonitoredApp(String packageName) async {
+    final list = state.trackedAppUsage
+        .where((e) => e.packageName != packageName)
+        .toList();
+    await _save(state.copyWith(trackedAppUsage: list));
+  }
+
+  Future<void> setTrackedAppLimit(String packageName, int limitMinutes) async {
+    final lim = snapFocusLimitMinutes(limitMinutes);
+    final list = state.trackedAppUsage
+        .map((e) =>
+            e.packageName == packageName ? e.copyWith(limitMinutes: lim) : e)
+        .toList();
+    await _save(state.copyWith(trackedAppUsage: list));
+  }
+
+  Future<void> setTrackedAppLimitEnabled(
+      String packageName, bool limitEnabled) async {
+    final list = state.trackedAppUsage
+        .map((e) => e.packageName == packageName
+            ? e.copyWith(limitEnabled: limitEnabled)
+            : e)
+        .toList();
+    await _save(state.copyWith(trackedAppUsage: list));
+  }
+
   void snooze(int minutes) {
     state = state.copyWith(
       snoozeUntil: DateTime.now().add(Duration(minutes: minutes)),
@@ -83,96 +128,119 @@ final focusSettingsProvider =
   (_) => FocusNotifier(),
 );
 
-// ── Usage tracking ───────────────────────────────────────────────────────────
+// ── Usage (Android UsageStats) ───────────────────────────────────────────────
 
-class UsageNotifier extends StateNotifier<int> {
-  UsageNotifier() : super(0) {
+class UsageStatsSnapshot {
+  const UsageStatsSnapshot({
+    required this.hasUsagePermission,
+    required this.totalOtherAppsSeconds,
+    required this.secondsByPackage,
+    required this.appsSorted,
+  });
+
+  final bool hasUsagePermission;
+  final int totalOtherAppsSeconds;
+  final Map<String, int> secondsByPackage;
+  final List<AppUsageStat> appsSorted;
+
+  static const empty = UsageStatsSnapshot(
+    hasUsagePermission: false,
+    totalOtherAppsSeconds: 0,
+    secondsByPackage: {},
+    appsSorted: [],
+  );
+}
+
+class UsageNotifier extends StateNotifier<UsageStatsSnapshot> {
+  UsageNotifier() : super(UsageStatsSnapshot.empty) {
     _init();
   }
 
-  DateTime? _sessionStart;
   AppLifecycleListener? _listener;
 
   Future<void> _init() async {
-    await _focusRepo.pruneOldUsage();
-    state = await _focusRepo.loadTodayUsageSeconds();
-    _sessionStart = DateTime.now(); // app already in foreground at init
     _listener = AppLifecycleListener(
-      onResume:   () => _sessionStart = DateTime.now(),
-      onPause:    _flush,
-      onInactive: _flush,
-      onHide:     _flush,
+      onResume: () => unawaited(refresh()),
+      onPause: () => unawaited(refresh()),
+      onInactive: () => unawaited(refresh()),
+      onHide: () => unawaited(refresh()),
     );
+    await refresh();
   }
 
   @override
   void dispose() {
-    _flush();
     _listener?.dispose();
     super.dispose();
   }
 
-  void _flush() {
-    if (_sessionStart == null) return;
-    final elapsed = DateTime.now().difference(_sessionStart!).inSeconds;
-    _sessionStart = null;
-    if (elapsed <= 0) return;
-    state = state + elapsed;
-    _focusRepo.saveTodayUsageSeconds(state);
+  Future<void> refresh() async {
+    final permitted = await UsageChannel.hasPermission();
+    if (!permitted) {
+      state = UsageStatsSnapshot.empty;
+      return;
+    }
+    final list = await UsageChannel.getAppUsage();
+    final map = <String, int>{
+      for (final s in list) s.packageName: s.secondsToday,
+    };
+    final total = list.fold<int>(0, (a, s) => a + s.secondsToday);
+    final sorted = [...list]
+      ..sort((a, b) => b.secondsToday.compareTo(a.secondsToday));
+    state = UsageStatsSnapshot(
+      hasUsagePermission: true,
+      totalOtherAppsSeconds: total,
+      secondsByPackage: map,
+      appsSorted: sorted,
+    );
   }
 
-  /// Called each second from the UI ticker so `isAppLockedProvider` reacts live.
-  void tick() {
-    if (_sessionStart == null) return;
-    final now = DateTime.now();
-    final total = state + now.difference(_sessionStart!).inSeconds;
-    if (total != state) state = total;
-  }
+  void tick() => unawaited(refresh());
 }
 
 final usageNotifierProvider =
-    StateNotifierProvider<UsageNotifier, int>((_) => UsageNotifier());
+    StateNotifierProvider<UsageNotifier, UsageStatsSnapshot>(
+  (_) => UsageNotifier(),
+);
 
-/// True when the app should be locked (limit hit or outside schedule),
-/// unless snoozed.
 final isAppLockedProvider = Provider<bool>((ref) {
   final settings = ref.watch(focusSettingsProvider);
   if (settings.isSnoozed) return false;
-
-  // Outside schedule window
   if (settings.isOutsideSchedule) return true;
 
-  // Daily usage limit exceeded
-  if (settings.usageLimitEnabled) {
-    final usedSeconds = ref.watch(usageNotifierProvider);
-    if (usedSeconds >= settings.dailyLimitMinutes * 60) return true;
+  final snap = ref.watch(usageNotifierProvider);
+  if (!snap.hasUsagePermission) return false;
+  for (final t in settings.trackedAppUsage) {
+    if (!t.limitEnabled) continue;
+    final sec = snap.secondsByPackage[t.packageName] ?? 0;
+    if (sec >= t.limitMinutes * 60) return true;
   }
-
   return false;
 });
 
-/// Returns the block reason string, or null if not locked.
 final lockReasonProvider = Provider<String?>((ref) {
   final settings = ref.watch(focusSettingsProvider);
   if (settings.isSnoozed) return null;
 
   if (settings.isOutsideSchedule) {
-    final start = _fmt(settings.scheduleStartHour);
-    final end   = _fmt(settings.scheduleEndHour);
+    final start = _fmtHour(settings.scheduleStartHour);
+    final end = _fmtHour(settings.scheduleEndHour);
     return 'App is scheduled to be available $start – $end.\nCome back then.';
   }
 
-  if (settings.usageLimitEnabled) {
-    final usedSeconds = ref.watch(usageNotifierProvider);
-    if (usedSeconds >= settings.dailyLimitMinutes * 60) {
-      return "You've reached your ${settings.dailyLimitMinutes}-minute daily limit.\nTime to step away and practice in real life.";
+  final snap = ref.watch(usageNotifierProvider);
+  if (!snap.hasUsagePermission) return null;
+  for (final t in settings.trackedAppUsage) {
+    if (!t.limitEnabled) continue;
+    final sec = snap.secondsByPackage[t.packageName] ?? 0;
+    if (sec >= t.limitMinutes * 60) {
+      return '${t.displayName} hit its ${t.limitMinutes}m daily limit today.\nTime to step away and practice in real life.';
     }
   }
-
   return null;
 });
 
-String _fmt(int hour) {
+String _fmtHour(int hour) {
   final suffix = hour < 12 ? 'AM' : 'PM';
   final h = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
   return '$h:00 $suffix';

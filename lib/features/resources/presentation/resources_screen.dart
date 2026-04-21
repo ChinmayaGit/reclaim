@@ -25,6 +25,9 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen>
     ('breakup', 'Heartbreak'),
     ('trauma', 'Trauma'),
     ('stress', 'Stress'),
+    ('gym', 'Gym'),
+    ('habits', 'Habits'),
+    ('discipline', 'Discipline'),
   ];
 
   static const _tabs = [

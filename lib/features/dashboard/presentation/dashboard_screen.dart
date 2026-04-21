@@ -9,6 +9,9 @@ import '../../../shared/widgets/streak_card.dart';
 import '../../../shared/widgets/mood_picker.dart';
 import '../../../features/tracker/domain/tracker_notifier.dart';
 import '../../../features/journal/domain/journal_notifier.dart';
+import '../../../features/health/domain/water_notifier.dart';
+import '../../../features/health/domain/sleep_notifier.dart';
+import '../../../features/discipline/domain/discipline_notifier.dart';
 import '../../../shared/models/journal_model.dart';
 import '../../../shared/models/tracker_model.dart';
 
@@ -39,7 +42,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             backgroundColor: context.colSurface,
             title: Text(
               'Reclaim',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 22),
+              style: Theme.of(context)
+                  .textTheme
+                  .displaySmall
+                  ?.copyWith(fontSize: 22),
             ),
             actions: [
               IconButton(
@@ -60,12 +66,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               delegate: SliverChildListDelegate([
                 _GreetingCard(name: user?.displayName ?? 'Friend'),
                 const SizedBox(height: 16),
-
+                const _AffirmationCard(),
+                const SizedBox(height: 20),
                 if (tracker != null) ...[
                   StreakCard(
                     tracker: tracker,
                     onCheckIn: () => _checkIn(context),
                   ),
+                  const SizedBox(height: 12),
+                  _CheckInCalendar(checkInDates: tracker.checkInDates),
                   const SizedBox(height: 16),
                 ],
 
@@ -82,15 +91,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   _MoodHistoryRow(history: moodHistory.take(7).toList()),
                   const SizedBox(height: 16),
                 ],
-
-                const _QuickActions(),
+                // ── Health & Habits ───────────────────────────────────────
+                const _HealthHubSection(),
+                const SizedBox(height: 16),
+                const _DisciplineTrainingHub(),
                 const SizedBox(height: 16),
 
                 const _DailyTipCard(),
                 const SizedBox(height: 16),
-
-                const _AffirmationCard(),
-                const SizedBox(height: 20),
 
                 // ── Recovery Tracking ────────────────────────────────────
                 if (tracker != null && tracker.counters.isNotEmpty) ...[
@@ -103,7 +111,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   onLog: () => _showUrgeDialog(context),
                 ),
                 const SizedBox(height: 16),
-
+                const _QuickActions(),
+                const SizedBox(height: 16),
                 _RelapseSectionHome(
                   onRelapse: () => _confirmRelapse(context),
                 ),
@@ -138,7 +147,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
-          left: 24, right: 24, top: 24,
+          left: 24,
+          right: 24,
+          top: 24,
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
         ),
         child: StatefulBuilder(
@@ -146,11 +157,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Log an Urge', style: Theme.of(ctx).textTheme.headlineMedium),
+              Text('Log an Urge',
+                  style: Theme.of(ctx).textTheme.headlineMedium),
               const SizedBox(height: 20),
-              Text('Intensity: $intensity/10', style: Theme.of(ctx).textTheme.labelLarge),
+              Text('Intensity: $intensity/10',
+                  style: Theme.of(ctx).textTheme.labelLarge),
               Slider(
-                value: intensity.toDouble(), min: 1, max: 10, divisions: 9,
+                value: intensity.toDouble(),
+                min: 1,
+                max: 10,
+                divisions: 9,
                 onChanged: (v) => setS(() => intensity = v.toInt()),
               ),
               const SizedBox(height: 12),
@@ -166,12 +182,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _OutcomeChip(label: '💪 Resisted', selected: outcome == 'resisted',
-                      color: AppColors.green400, bg: AppColors.green50,
+                  _OutcomeChip(
+                      label: '💪 Resisted',
+                      selected: outcome == 'resisted',
+                      color: AppColors.green400,
+                      bg: AppColors.green50,
                       onTap: () => setS(() => outcome = 'resisted')),
                   const SizedBox(width: 10),
-                  _OutcomeChip(label: '🔄 Relapsed', selected: outcome == 'relapsed',
-                      color: AppColors.coral400, bg: AppColors.coral50,
+                  _OutcomeChip(
+                      label: '🔄 Relapsed',
+                      selected: outcome == 'relapsed',
+                      color: AppColors.coral400,
+                      bg: AppColors.coral50,
                       onTap: () => setS(() => outcome = 'relapsed')),
                 ],
               ),
@@ -207,21 +229,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           "It's okay. This is part of recovery. Logging it honestly is a courageous step.\n\nThis will reset your streak counter.",
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.coral400),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.coral400),
             onPressed: () async {
               await ref.read(trackerNotifierProvider.notifier).logRelapse();
               if (ctx.mounted) {
                 Navigator.pop(ctx);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('You came back. That counts.')),
+                    const SnackBar(
+                        content: Text('You came back. That counts.')),
                   );
                 }
               }
             },
-            child: const Text('Log Relapse', style: TextStyle(color: Colors.white)),
+            child: const Text('Log Relapse',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -233,12 +259,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (uid == null) return;
     final messenger = ScaffoldMessenger.of(context);
     await ref.read(journalNotifierProvider.notifier).saveMoodCheckin(
-      MoodCheckin(
-        userId: uid,
-        moodScore: _moodValue,
-        checkinDate: DateTime.now(),
-      ),
-    );
+          MoodCheckin(
+            userId: uid,
+            moodScore: _moodValue,
+            checkinDate: DateTime.now(),
+          ),
+        );
     if (!mounted) return;
     setState(() => _moodSubmitted = true);
     messenger.showSnackBar(
@@ -271,7 +297,8 @@ class _GreetingCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$_greeting,', style: Theme.of(context).textTheme.bodyMedium),
+              Text('$_greeting,',
+                  style: Theme.of(context).textTheme.bodyMedium),
               Text(
                 name.split(' ').first,
                 style: Theme.of(context).textTheme.displaySmall,
@@ -282,12 +309,14 @@ class _GreetingCard extends StatelessWidget {
         GestureDetector(
           onTap: () => context.push(AppConstants.routeSettings),
           child: Container(
-            width: 44, height: 44,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: context.colTint(AppColors.teal50, AppColors.teal50Dk),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.notifications_outlined, color: AppColors.teal600),
+            child: const Icon(Icons.notifications_outlined,
+                color: AppColors.teal600),
           ),
         ),
       ],
@@ -319,7 +348,8 @@ class _MoodCheckinCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('How are you right now?', style: Theme.of(context).textTheme.headlineSmall),
+          Text('How are you right now?',
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 4),
           Text(
             'Honest check-ins help you spot patterns over time.',
@@ -362,9 +392,11 @@ class _MoodHistoryRow extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Mood This Week', style: Theme.of(context).textTheme.labelLarge),
+              Text('Mood This Week',
+                  style: Theme.of(context).textTheme.labelLarge),
               TextButton(
-                onPressed: () => GoRouter.of(context).push(AppConstants.routeReports),
+                onPressed: () =>
+                    GoRouter.of(context).push(AppConstants.routeReports),
                 child: const Text('View All'),
               ),
             ],
@@ -412,12 +444,42 @@ class _QuickActions extends StatelessWidget {
     final isDark = context.isDark;
 
     final actions = [
-      _Action('Journal',   Icons.book_outlined,           isDark ? AppColors.amber50Dk  : AppColors.amber50,  AppColors.amber600,  AppConstants.routeJournal),
-      _Action('Tracker',   Icons.bar_chart,                isDark ? AppColors.teal50Dk   : AppColors.teal50,   AppColors.teal600,   AppConstants.routeTracker),
-      _Action('Resources', Icons.library_books_outlined,   isDark ? AppColors.blue50Dk   : AppColors.blue50,   AppColors.blue600,   AppConstants.routeResources),
-      _Action('Sessions',  Icons.person_outlined,          isDark ? AppColors.purple50Dk : AppColors.purple50, AppColors.purple600, AppConstants.routeSessions),
-      _Action('Reports',   Icons.picture_as_pdf_outlined,  isDark ? AppColors.green50Dk  : AppColors.green50,  AppColors.green600,  AppConstants.routeReports),
-      _Action('Crisis',    Icons.sos_outlined,             isDark ? AppColors.coral50Dk  : AppColors.coral50,  AppColors.coral600,  AppConstants.routeCrisis),
+      _Action(
+          'Journal',
+          Icons.book_outlined,
+          isDark ? AppColors.amber50Dk : AppColors.amber50,
+          AppColors.amber600,
+          AppConstants.routeJournal),
+      _Action(
+          'Tracker',
+          Icons.bar_chart,
+          isDark ? AppColors.teal50Dk : AppColors.teal50,
+          AppColors.teal600,
+          AppConstants.routeTracker),
+      _Action(
+          'Resources',
+          Icons.library_books_outlined,
+          isDark ? AppColors.blue50Dk : AppColors.blue50,
+          AppColors.blue600,
+          AppConstants.routeResources),
+      _Action(
+          'Discipline',
+          Icons.checklist_outlined,
+          isDark ? AppColors.green50Dk : AppColors.green50,
+          AppColors.green600,
+          AppConstants.routeDiscipline),
+      _Action(
+          'Reports',
+          Icons.picture_as_pdf_outlined,
+          isDark ? AppColors.purple50Dk : AppColors.purple50,
+          AppColors.purple600,
+          AppConstants.routeReports),
+      _Action(
+          'Crisis',
+          Icons.sos_outlined,
+          isDark ? AppColors.coral50Dk : AppColors.coral50,
+          AppColors.coral600,
+          AppConstants.routeCrisis),
     ];
 
     return Column(
@@ -486,18 +548,66 @@ class _DailyTipCard extends StatelessWidget {
   const _DailyTipCard();
 
   static const _tips = [
-    ('✋', 'HALT Check', 'Before acting on any urge, ask: Am I Hungry, Angry, Lonely, or Tired? Address that need first.'),
-    ('🌊', 'Urge Surfing', 'Urges peak in 15–20 minutes then pass. Ride it like a wave — you don\'t have to act on it.'),
-    ('📞', 'Reach Out', 'Isolation fuels struggle. Send one text to a safe person today, even just to say hello.'),
-    ('💧', 'Hydrate First', 'Dehydration mimics anxiety. Drink a glass of water before responding to any strong emotion.'),
-    ('🚶', 'Move Your Body', '5 minutes of movement — a walk, stretching, even jumping jacks — shifts your emotional state.'),
-    ('📖', 'Name It', '"I notice I feel anxious" creates space between you and the feeling. Name it to tame it.'),
-    ('🛡️', 'Your Why', 'When it gets hard, return to your reason. Write it down and keep it somewhere visible.'),
-    ('😮‍💨', 'Box Breathing', 'In for 4, hold 4, out for 4, hold 4. Do this three times when stress peaks.'),
-    ('🌱', 'Small Wins', 'Recovery is built one small decision at a time. Each right choice, however small, is real progress.'),
-    ('🌙', 'Sleep Matters', 'Fatigue is one of the biggest relapse triggers. Protecting your sleep protects your recovery.'),
-    ('🤍', 'Self-Compassion', 'You would forgive a friend for struggling. You deserve the same kindness from yourself.'),
-    ('🔄', 'Routine', 'Structure reduces decision fatigue. The fewer choices you have under stress, the better.'),
+    (
+      '✋',
+      'HALT Check',
+      'Before acting on any urge, ask: Am I Hungry, Angry, Lonely, or Tired? Address that need first.'
+    ),
+    (
+      '🌊',
+      'Urge Surfing',
+      'Urges peak in 15–20 minutes then pass. Ride it like a wave — you don\'t have to act on it.'
+    ),
+    (
+      '📞',
+      'Reach Out',
+      'Isolation fuels struggle. Send one text to a safe person today, even just to say hello.'
+    ),
+    (
+      '💧',
+      'Hydrate First',
+      'Dehydration mimics anxiety. Drink a glass of water before responding to any strong emotion.'
+    ),
+    (
+      '🚶',
+      'Move Your Body',
+      '5 minutes of movement — a walk, stretching, even jumping jacks — shifts your emotional state.'
+    ),
+    (
+      '📖',
+      'Name It',
+      '"I notice I feel anxious" creates space between you and the feeling. Name it to tame it.'
+    ),
+    (
+      '🛡️',
+      'Your Why',
+      'When it gets hard, return to your reason. Write it down and keep it somewhere visible.'
+    ),
+    (
+      '😮‍💨',
+      'Box Breathing',
+      'In for 4, hold 4, out for 4, hold 4. Do this three times when stress peaks.'
+    ),
+    (
+      '🌱',
+      'Small Wins',
+      'Recovery is built one small decision at a time. Each right choice, however small, is real progress.'
+    ),
+    (
+      '🌙',
+      'Sleep Matters',
+      'Fatigue is one of the biggest relapse triggers. Protecting your sleep protects your recovery.'
+    ),
+    (
+      '🤍',
+      'Self-Compassion',
+      'You would forgive a friend for struggling. You deserve the same kindness from yourself.'
+    ),
+    (
+      '🔄',
+      'Routine',
+      'Structure reduces decision fatigue. The fewer choices you have under stress, the better.'
+    ),
   ];
 
   @override
@@ -509,7 +619,9 @@ class _DailyTipCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.teal200.withValues(alpha: context.isDark ? 0.3 : 1)),
+        border: Border.all(
+            color:
+                AppColors.teal200.withValues(alpha: context.isDark ? 0.3 : 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,12 +634,16 @@ class _DailyTipCard extends StatelessWidget {
                   color: context.colTint(AppColors.teal50, AppColors.teal50Dk),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.tips_and_updates_outlined, size: 16, color: AppColors.teal600),
+                child: const Icon(Icons.tips_and_updates_outlined,
+                    size: 16, color: AppColors.teal600),
               ),
               const SizedBox(width: 8),
               const Text(
                 'Daily Recovery Tip',
-                style: TextStyle(fontSize: 12, color: AppColors.teal600, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.teal600,
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -569,6 +685,472 @@ class _DailyTipCard extends StatelessWidget {
   }
 }
 
+// ─── Outcome chip (urge dialog) ───────────────────────────────────────────────
+
+class _OutcomeChip extends StatelessWidget {
+  const _OutcomeChip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.bg,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final Color color, bg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? bg
+              : context.colTint(AppColors.slate50, AppColors.slate50Dk),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected ? color : context.colBorder,
+              width: selected ? 2 : 1),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: selected ? color : context.colTextSec,
+                fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+// ─── Recovery counters (home) ─────────────────────────────────────────────────
+
+class _CountersSectionHome extends StatelessWidget {
+  const _CountersSectionHome({required this.tracker});
+  final TrackerModel tracker;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Recovery Counters',
+                  style: Theme.of(context).textTheme.headlineSmall),
+              TextButton(
+                onPressed: () => GoRouter.of(context)
+                    .push('${AppConstants.routeTracker}/milestones'),
+                child: const Text('Milestones'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...tracker.counters.map((c) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: context.colTint(AppColors.teal50, AppColors.teal50Dk),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: context.colTint(
+                          AppColors.teal100, AppColors.teal50Dk)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.emoji_events_outlined,
+                        color: AppColors.teal600),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(c.label,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                            'Since ${DateFormat('MMM d, yyyy').format(c.startDate)}',
+                            style: TextStyle(
+                                fontSize: 12, color: context.colTextSec),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.teal400,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${c.daysSince}d',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Urge log section (home) ──────────────────────────────────────────────────
+
+class _UrgeLogSectionHome extends StatelessWidget {
+  const _UrgeLogSectionHome({required this.logs, required this.onLog});
+  final List<UrgeLog> logs;
+  final VoidCallback onLog;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Urge Log',
+                  style: Theme.of(context).textTheme.headlineSmall),
+              TextButton.icon(
+                onPressed: onLog,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Log Urge'),
+              ),
+            ],
+          ),
+          if (logs.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text('No urges logged yet.',
+                  style: TextStyle(color: context.colTextSec)),
+            )
+          else
+            ...logs.take(3).map((log) {
+              final isResisted = log.outcome == 'resisted';
+              return Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isResisted
+                      ? context.colTint(AppColors.green50, AppColors.green50Dk)
+                      : context.colTint(AppColors.coral50, AppColors.coral50Dk),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Text(isResisted ? '💪' : '🔄',
+                        style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            log.trigger.isEmpty ? 'Urge logged' : log.trigger,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w500, fontSize: 13),
+                          ),
+                          Text('Intensity: ${log.intensity}/10',
+                              style: TextStyle(
+                                  fontSize: 11, color: context.colTextSec)),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      DateFormat('MMM d').format(log.loggedAt),
+                      style:
+                          TextStyle(fontSize: 11, color: context.colTextHint),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Relapse section (home) ───────────────────────────────────────────────────
+
+class _RelapseSectionHome extends StatelessWidget {
+  const _RelapseSectionHome({required this.onRelapse});
+  final VoidCallback onRelapse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colTint(AppColors.coral50, AppColors.coral50Dk),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: context.colTint(AppColors.coral100, AppColors.coral50Dk)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Had a relapse?',
+              style: TextStyle(
+                  fontWeight: FontWeight.w600, color: AppColors.coral600)),
+          const SizedBox(height: 4),
+          Text(
+            "It's part of recovery. Logging it honestly is strength.",
+            style: TextStyle(fontSize: 12, color: context.colTextSec),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.coral600,
+              side: const BorderSide(color: AppColors.coral400),
+            ),
+            onPressed: onRelapse,
+            child: const Text('Log a Relapse'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Check-in Calendar ────────────────────────────────────────────────────────
+
+class _CheckInCalendar extends StatefulWidget {
+  const _CheckInCalendar({required this.checkInDates});
+  final List<String> checkInDates;
+
+  @override
+  State<_CheckInCalendar> createState() => _CheckInCalendarState();
+}
+
+class _CheckInCalendarState extends State<_CheckInCalendar> {
+  late DateTime _viewing;
+  late Set<String> _dates;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewing = DateTime.now();
+    _dates = widget.checkInDates.toSet();
+  }
+
+  @override
+  void didUpdateWidget(_CheckInCalendar old) {
+    super.didUpdateWidget(old);
+    _dates = widget.checkInDates.toSet();
+  }
+
+  void _prevMonth() {
+    setState(() {
+      _viewing = DateTime(_viewing.year, _viewing.month - 1);
+    });
+  }
+
+  void _nextMonth() {
+    final now = DateTime.now();
+    final next = DateTime(_viewing.year, _viewing.month + 1);
+    if (next.isBefore(DateTime(now.year, now.month + 1))) {
+      setState(() => _viewing = next);
+    }
+  }
+
+  String _fmt(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final first = DateTime(_viewing.year, _viewing.month, 1);
+    final daysInMonth = DateTime(_viewing.year, _viewing.month + 1, 0).day;
+    final startWeekday = first.weekday % 7; // 0=Sun
+
+    final monthLabel = DateFormat('MMMM yyyy').format(first);
+    final canGoNext = DateTime(_viewing.year, _viewing.month + 1)
+        .isBefore(DateTime(now.year, now.month + 1));
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colBorder),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                onPressed: _prevMonth,
+                icon: const Icon(Icons.chevron_left, size: 20),
+                visualDensity: VisualDensity.compact,
+              ),
+              Text(
+                monthLabel,
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              IconButton(
+                onPressed: canGoNext ? _nextMonth : null,
+                icon: const Icon(Icons.chevron_right, size: 20),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: const ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+                .map((d) => SizedBox(
+                      width: 36,
+                      child: Text(
+                        d,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: context.colTextHint,
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 6),
+          ...List.generate(
+            ((startWeekday + daysInMonth + 6) / 7).ceil(),
+            (week) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: List.generate(7, (col) {
+                    final dayNum = week * 7 + col - startWeekday + 1;
+                    if (dayNum < 1 || dayNum > daysInMonth) {
+                      return const SizedBox(width: 36, height: 36);
+                    }
+
+                    final date =
+                        DateTime(_viewing.year, _viewing.month, dayNum);
+                    final dateStr = _fmt(date);
+                    final isChecked = _dates.contains(dateStr);
+                    final isToday = date == today;
+                    final isPast = date.isBefore(today);
+                    final isMissed = isPast && !isChecked;
+
+                    Color bg;
+                    Color fg;
+                    if (isChecked) {
+                      bg = AppColors.teal400;
+                      fg = Colors.white;
+                    } else if (isToday) {
+                      bg = context.isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.06);
+                      fg = context.colText;
+                    } else if (isMissed) {
+                      bg = context.isDark
+                          ? AppColors.coral400.withValues(alpha: 0.15)
+                          : AppColors.coral50;
+                      fg = context.isDark
+                          ? AppColors.coral400.withValues(alpha: 0.6)
+                          : AppColors.coral400.withValues(alpha: 0.5);
+                    } else {
+                      bg = Colors.transparent;
+                      fg = context.colTextSec;
+                    }
+
+                    return SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: bg,
+                          shape: BoxShape.circle,
+                          border: isToday && !isChecked
+                              ? Border.all(color: AppColors.teal400, width: 1.5)
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$dayNum',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isChecked || isToday
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                            color: fg,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _CalLegend(color: AppColors.teal400, label: 'Checked in'),
+              const SizedBox(width: 16),
+              _CalLegend(
+                color: context.isDark
+                    ? AppColors.coral400.withValues(alpha: 0.4)
+                    : AppColors.coral100,
+                label: 'Missed',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalLegend extends StatelessWidget {
+  const _CalLegend({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 10, color: context.colTextHint)),
+      ],
+    );
+  }
+}
+
 // ─── Affirmation ──────────────────────────────────────────────────────────────
 
 class _AffirmationCard extends StatelessWidget {
@@ -602,7 +1184,10 @@ class _AffirmationCard extends StatelessWidget {
         children: [
           const Text(
             "Today's Affirmation",
-            style: TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(
+                color: Colors.white60,
+                fontSize: 12,
+                fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 10),
           Text(
@@ -615,6 +1200,275 @@ class _AffirmationCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Health Hub Section ────────────────────────────────────────────────────────
+
+class _HealthHubSection extends ConsumerWidget {
+  const _HealthHubSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final water = ref.watch(waterProvider);
+    final sleep = ref.watch(sleepProvider);
+    final discipline = ref.watch(disciplineProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Health & Habits', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            // Water card
+            Expanded(
+              child: _HealthCard(
+                icon: Icons.water_drop_outlined,
+                color: AppColors.blue400,
+                label: 'Water',
+                value: _fmtWater(water.totalTodayMl),
+                sub: 'of ${_fmtWater(water.goalMl)} goal',
+                progress: water.progress,
+                route: AppConstants.routeWater,
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Sleep card
+            Expanded(
+              child: _HealthCard(
+                icon: Icons.bedtime_outlined,
+                color: AppColors.purple400,
+                label: 'Sleep',
+                value: sleep.lastNightHours != null
+                    ? '${sleep.lastNightHours!.toStringAsFixed(1)}h'
+                    : '— h',
+                sub: 'goal ${sleep.goalHours.toStringAsFixed(0)}h',
+                progress: sleep.lastNightHours != null
+                    ? (sleep.lastNightHours! / sleep.goalHours).clamp(0.0, 1.0)
+                    : 0,
+                route: AppConstants.routeSleep,
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Discipline card
+            Expanded(
+              child: _HealthCard(
+                icon: Icons.checklist_outlined,
+                color: AppColors.green400,
+                label: 'Habits',
+                value: '${discipline.completedCount}/${discipline.totalCount}',
+                sub: discipline.streak > 0
+                    ? '${discipline.streak}d streak'
+                    : 'start today',
+                progress: discipline.progress,
+                route: AppConstants.routeDiscipline,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _fmtWater(int ml) =>
+      ml >= 1000 ? '${(ml / 1000).toStringAsFixed(1)}L' : '${ml}ml';
+}
+
+// ── Discipline & training (gym / habits / focus) ─────────────────────────────
+
+class _DisciplineTrainingHub extends StatelessWidget {
+  const _DisciplineTrainingHub();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Discipline & training',
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Choose a tracker — gym session log, daily habit checklist, or focus tools.',
+          style: TextStyle(fontSize: 12, color: context.colTextSec, height: 1.35),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 118,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            children: [
+              _DisciplineTrackCard(
+                title: 'Gym log',
+                subtitle: 'Sets · reps · volume',
+                icon: Icons.fitness_center,
+                accent: AppColors.amber600,
+                bg: isDark ? const Color(0xFF2A2318) : AppColors.amber50,
+                onTap: () => context.push(AppConstants.routeWorkoutLog),
+              ),
+              _DisciplineTrackCard(
+                title: 'Daily habits',
+                subtitle: 'Checklist & streak',
+                icon: Icons.checklist_outlined,
+                accent: AppColors.green600,
+                bg: isDark ? const Color(0xFF182418) : AppColors.green50,
+                onTap: () => context.push(AppConstants.routeDiscipline),
+              ),
+              _DisciplineTrackCard(
+                title: 'Focus & block',
+                subtitle: 'Pomodoro · schedule',
+                icon: Icons.timer_outlined,
+                accent: AppColors.teal600,
+                bg: isDark ? const Color(0xFF18262A) : AppColors.teal50,
+                onTap: () => context.push(AppConstants.routeFocus),
+              ),
+              _DisciplineTrackCard(
+                title: 'Guides',
+                subtitle: 'Gym · habits · discipline',
+                icon: Icons.library_books_outlined,
+                accent: AppColors.blue600,
+                bg: isDark ? const Color(0xFF1A2230) : AppColors.blue50,
+                onTap: () => context.push(AppConstants.routeResources),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DisciplineTrackCard extends StatelessWidget {
+  const _DisciplineTrackCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accent,
+    required this.bg,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accent;
+  final Color bg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 152,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accent.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: accent, size: 22),
+              const Spacer(),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: context.colText,
+                ),
+              ),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.25,
+                  color: context.colTextSec,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HealthCard extends StatelessWidget {
+  const _HealthCard({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+    required this.sub,
+    required this.progress,
+    required this.route,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label, value, sub, route;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(route),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.colSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.colBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 16),
+                const Spacer(),
+                Icon(Icons.chevron_right, color: context.colTextHint, size: 14),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: context.colText)),
+            Text(sub,
+                style: TextStyle(fontSize: 10, color: context.colTextSec)),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 4,
+                backgroundColor: color.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 10,
+                    color: context.colTextHint,
+                    fontWeight: FontWeight.w500)),
+          ],
+        ),
       ),
     );
   }

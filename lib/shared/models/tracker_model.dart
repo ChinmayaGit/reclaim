@@ -7,6 +7,7 @@ class TrackerModel {
   final int longestStreak;
   final DateTime? lastCheckIn;
   final List<String> milestones; // earned milestone labels: "7d", "30d"…
+  final List<String> checkInDates; // 'yyyy-MM-dd' strings of each check-in day
 
   const TrackerModel({
     required this.userId,
@@ -15,6 +16,7 @@ class TrackerModel {
     this.longestStreak = 0,
     this.lastCheckIn,
     this.milestones = const [],
+    this.checkInDates = const [],
   });
 
   bool get checkedInToday {
@@ -37,6 +39,7 @@ class TrackerModel {
           ? (json['lastCheckIn'] as Timestamp).toDate()
           : null,
       milestones: List<String>.from(json['milestones'] ?? []),
+      checkInDates: List<String>.from(json['checkInDates'] ?? []),
     );
   }
 
@@ -48,6 +51,7 @@ class TrackerModel {
     'lastCheckIn':
         lastCheckIn != null ? Timestamp.fromDate(lastCheckIn!) : null,
     'milestones': milestones,
+    'checkInDates': checkInDates,
   };
 }
 

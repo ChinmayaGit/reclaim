@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,9 +24,11 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   void initState() {
     super.initState();
-    // Tick the usage counter every second so isAppLockedProvider reacts live.
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      ref.read(usageNotifierProvider.notifier).tick();
+    _ticker = Timer.periodic(const Duration(seconds: 5), (_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(usageNotifierProvider.notifier).tick();
+      });
     });
   }
 
@@ -45,11 +48,6 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isLocked = ref.watch(isAppLockedProvider);
-
-    // Show lock overlay on top of everything when the app is locked.
-    if (isLocked) return const AppLockedOverlay();
-
     final location = GoRouterState.of(context).matchedLocation;
     ref.watch(isAdminProvider);
 
@@ -61,66 +59,80 @@ class _MainShellState extends ConsumerState<MainShell> {
     final sosBorder = isDark ? AppColors.coral600.withValues(alpha: 0.5) : AppColors.coral100;
     final sosBg = isDark ? const Color(0xFF2A1A1A) : AppColors.coral50;
 
-    return Scaffold(
-      body: widget.child,
-      // No FAB — SOS lives in the bottom bar strip to avoid overlapping
-      // child-screen FABs (e.g. community "Share" button).
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── SOS Crisis strip ──────────────────────────────────────────
-          Material(
-            color: navBg,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: sosBorder, width: 1)),
-              ),
-              child: GestureDetector(
-                onTap: () => context.push(AppConstants.routeCrisis),
-                child: Container(
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: sosBg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.coral400.withValues(alpha: 0.6)),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.emergency, size: 14, color: AppColors.coral600),
-                      SizedBox(width: 6),
-                      Text(
-                        'Crisis Support — tap if you need help now',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.coral600,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(
+          child: Scaffold(
+            body: widget.child,
+            bottomNavigationBar: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Material(
+                  color: navBg,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: sosBorder, width: 1)),
+                    ),
+                    child: GestureDetector(
+                      onTap: () => context.push(AppConstants.routeCrisis),
+                      child: Container(
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: sosBg,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.coral400.withValues(alpha: 0.6)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.emergency, size: 14, color: AppColors.coral600),
+                            SizedBox(width: 6),
+                            Text(
+                              'Crisis Support — tap if you need help now',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.coral600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                NavigationBar(
+                  selectedIndex: currentIndex,
+                  onDestinationSelected: (i) => context.go(_tabs[i].route),
+                  backgroundColor: navBg,
+                  indicatorColor: AppColors.teal50,
+                  destinations: _tabs.map((t) => NavigationDestination(
+                    icon: Icon(t.icon),
+                    selectedIcon: Icon(t.activeIcon, color: AppColors.teal600),
+                    label: t.label,
+                  )).toList(),
+                ),
+              ],
             ),
           ),
-
-          // ── Bottom navigation ─────────────────────────────────────────
-          NavigationBar(
-            selectedIndex: currentIndex,
-            onDestinationSelected: (i) => context.go(_tabs[i].route),
-            backgroundColor: navBg,
-            indicatorColor: AppColors.teal50,
-            destinations: _tabs.map((t) => NavigationDestination(
-              icon: Icon(t.icon),
-              selectedIcon: Icon(t.activeIcon, color: AppColors.teal600),
-              label: t.label,
-            )).toList(),
-          ),
-        ],
-      ),
+        ),
+        const _LockOverlayGate(),
+      ],
     );
+  }
+}
+
+class _LockOverlayGate extends ConsumerWidget {
+  const _LockOverlayGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locked = ref.watch(isAppLockedProvider);
+    if (!locked) return const SizedBox.shrink();
+    return const Positioned.fill(child: AppLockedOverlay());
   }
 }
 

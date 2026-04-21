@@ -161,7 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
+                        minimumSize: const Size(48, 50),
                       ),
                       onPressed: _googleSignIn,
                       icon: const Icon(Icons.g_mobiledata, size: 24),

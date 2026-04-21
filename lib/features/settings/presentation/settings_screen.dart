@@ -65,7 +65,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsTile(
             icon: Icons.shield_moon_outlined,
             title: 'App Limiter & Site Blocker',
-            subtitle: 'Set usage limits, schedules, and block trigger sites',
+            subtitle: 'Track app usage, schedules, and block trigger sites',
             color: AppColors.teal600,
             onTap: () => context.push(AppConstants.routeFocus),
           ),
@@ -102,7 +102,7 @@ class SettingsScreen extends ConsumerWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.coral600,
                 side: const BorderSide(color: AppColors.coral400),
-                minimumSize: const Size.fromHeight(50),
+                minimumSize: const Size(48, 50),
               ),
               onPressed: () => _signOut(context, ref),
               icon: const Icon(Icons.logout),

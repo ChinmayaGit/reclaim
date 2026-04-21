@@ -2,10 +2,11 @@
 ///
 /// Sources:
 ///   • Wikimedia Commons (CC0 / Public Domain) — upload.wikimedia.org
+///     Uses transcoded MP3 versions for maximum device compatibility.
 ///   • Internet Archive (CC0 1.0) — archive.org
 ///
-/// All URLs verified via the Wikimedia Commons API (imageinfo) and
-/// the Internet Archive file listings. No guessed paths.
+/// All URLs verified via the Wikimedia Commons API (videoinfo/derivatives)
+/// and the Internet Archive file listings. No guessed paths.
 /// ─────────────────────────────────────────────────────────────────────────────
 class AmbientTrack {
   const AmbientTrack({
@@ -27,7 +28,7 @@ class AmbientTrack {
   /// 'nature' | 'focus' | 'sleep' | 'meditation'
   final String category;
 
-  /// Direct OGG/MP3 URL — streamed via just_audio.
+  /// Direct MP3 URL — downloaded to local storage for offline playback.
   final String storageUrl;
 
   final String license;
@@ -63,10 +64,10 @@ class AmbientTracks {
       id: 'ocean_waves',
       name: 'Ocean Waves',
       emoji: '🌊',
-      description: 'Waterfall and Atlantic ocean waves for deep relaxation.',
+      description: 'Lake-shore waves recorded on Lake Ontario — deep relaxation.',
       category: 'nature',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/3/3b/Bubbling_Waterfall_and_Ocean_Waves.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/1/1f/Waves.ogg/Waves.ogg.mp3',
     ),
     AmbientTrack(
       id: 'forest_birds',
@@ -75,7 +76,7 @@ class AmbientTracks {
       description: 'Dawn birdsong to ground and energise.',
       category: 'nature',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/e/e7/Birdsong_morning_01.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/4/42/Bird_singing.ogg/Bird_singing.ogg.mp3',
     ),
     AmbientTrack(
       id: 'mountain_stream',
@@ -96,7 +97,7 @@ class AmbientTracks {
       description: 'Steady hiss to block distractions and boost focus.',
       category: 'focus',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/a/aa/White_noise.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/a/aa/White_noise.ogg/White_noise.ogg.mp3',
     ),
     AmbientTrack(
       id: 'brown_noise',
@@ -105,7 +106,7 @@ class AmbientTracks {
       description: 'Wind through Swedish pine forest — easy on the ears.',
       category: 'focus',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/f/f3/Wind_in_Swedish_pine_forest_at_25_mps.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/f/f3/Wind_in_Swedish_pine_forest_at_25_mps.ogg/Wind_in_Swedish_pine_forest_at_25_mps.ogg.mp3',
     ),
     AmbientTrack(
       id: 'thunder',
@@ -114,7 +115,7 @@ class AmbientTracks {
       description: 'Rolling thunder and rain for deep concentration.',
       category: 'focus',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/b/bd/Storm_thunderbolts.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/b/bd/Storm_thunderbolts.ogg/Storm_thunderbolts.ogg.mp3',
     ),
 
     // ── Meditation ───────────────────────────────────────────────────────────
@@ -132,11 +133,11 @@ class AmbientTracks {
       id: 'om_drone',
       name: 'Meditation Tone',
       emoji: '🕉️',
-      description: 'Deep bowl tone for mindfulness sits.',
+      description: 'Tibetan singing bowl tone for mindfulness sits.',
       category: 'meditation',
       storageUrl:
-          'https://archive.org/download/singingbowlmeditation/Short%20meditation%20track-1.mp3',
-      source: 'archive.org',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/1/17/Small_tibetan_singing_bowl.ogg/Small_tibetan_singing_bowl.ogg.mp3',
+      license: 'CC BY-SA 4.0',
     ),
 
     // ── Sleep ────────────────────────────────────────────────────────────────
@@ -147,16 +148,18 @@ class AmbientTracks {
       description: 'Frogs and insects at a peaceful pond — for sleep.',
       category: 'sleep',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/f/fe/Nature_sounds_ambience_in_a_Dordogne_pond.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/f/fe/Nature_sounds_ambience_in_a_Dordogne_pond.ogg/Nature_sounds_ambience_in_a_Dordogne_pond.ogg.mp3',
+      license: 'CC BY 3.0',
     ),
     AmbientTrack(
       id: 'fireplace',
-      name: 'Forge Fire',
+      name: 'Campfire',
       emoji: '🔥',
-      description: 'Roaring fire for warmth and comfort.',
+      description: 'Crackling campfire for warmth and comfort.',
       category: 'sleep',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/0/01/WWS_Fireoftheforge.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/b/b1/Campfire_sound_ambience.ogg/Campfire_sound_ambience.ogg.mp3',
+      license: 'CC BY 3.0',
     ),
     AmbientTrack(
       id: 'rain_sleep',
@@ -165,7 +168,7 @@ class AmbientTracks {
       description: 'Tropical night rain and jungle sounds for deep sleep.',
       category: 'sleep',
       storageUrl:
-          'https://upload.wikimedia.org/wikipedia/commons/a/a0/2013-07-24_00-19-04hrs_Chiang_Mai_Chang_Khien_rain_animal_sounds_night_time.ogg',
+          'https://upload.wikimedia.org/wikipedia/commons/transcoded/a/a0/2013-07-24_00-19-04hrs_Chiang_Mai_Chang_Khien_rain_animal_sounds_night_time.ogg/2013-07-24_00-19-04hrs_Chiang_Mai_Chang_Khien_rain_animal_sounds_night_time.ogg.mp3',
     ),
   ];
 

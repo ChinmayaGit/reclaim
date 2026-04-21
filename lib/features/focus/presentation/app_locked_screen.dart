@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/focus_notifier.dart';
@@ -16,7 +15,6 @@ class _AppLockedOverlayState extends ConsumerState<AppLockedOverlay>
     with TickerProviderStateMixin {
   late final AnimationController _breathCtrl;
   late final Animation<double> _breathAnim;
-  late Timer _ticker;
 
   @override
   void initState() {
@@ -28,16 +26,11 @@ class _AppLockedOverlayState extends ConsumerState<AppLockedOverlay>
     _breathAnim = Tween<double>(begin: 0.85, end: 1.15).animate(
       CurvedAnimation(parent: _breathCtrl, curve: Curves.easeInOut),
     );
-    // Keep usage counter ticking so the lock releases the moment snooze starts
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      ref.read(usageNotifierProvider.notifier).tick();
-    });
   }
 
   @override
   void dispose() {
     _breathCtrl.dispose();
-    _ticker.cancel();
     super.dispose();
   }
 
@@ -126,18 +119,18 @@ class _AppLockedOverlayState extends ConsumerState<AppLockedOverlay>
                   ),
                   icon: const Icon(Icons.favorite, size: 18),
                   label: const Text(
-                    'Support Reclaim — Unlock 30 min',
+                    'Support Reclaim — Unlock 1 Hour',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   onPressed: () => showDonationUnlockSheet(
                     context,
-                    snoozeMinutes: 30,
-                    headline: 'Unlock 30 More Minutes',
+                    snoozeMinutes: 60,
+                    headline: 'Unlock 1 More Hour',
                     subline:
                         'Reclaim is free and ad-free. A small donation keeps '
-                        'the servers running and unlocks 30 minutes for you.',
+                        'the servers running and unlocks 1 hour for you.',
                     onGranted: () =>
-                        ref.read(focusSettingsProvider.notifier).snooze(30),
+                        ref.read(focusSettingsProvider.notifier).snooze(60),
                     onSkip: () =>
                         ref.read(focusSettingsProvider.notifier).snooze(10),
                   ),

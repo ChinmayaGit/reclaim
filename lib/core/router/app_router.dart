@@ -20,12 +20,17 @@ import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/donation/presentation/donation_screen.dart';
 import '../../features/focus/presentation/focus_screen.dart';
+import '../../features/focus/presentation/craving_shield_screen.dart';
 import '../../features/resources/presentation/ambient_player_screen.dart';
 import '../../features/resources/presentation/resource_detail_screen.dart';
 import '../../features/resources/data/resource_model.dart';
+import '../../features/health/presentation/water_screen.dart';
+import '../../features/health/presentation/sleep_screen.dart';
+import '../../features/discipline/presentation/discipline_screen.dart';
+import '../../features/workout_log/presentation/workout_log_screen.dart';
+import '../navigation/nav_key.dart';
 import '../shell/main_shell.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 // Notifies GoRouter when auth state changes so redirect is re-evaluated
@@ -43,7 +48,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.listen(userProfileProvider, (_, __) => notifier.refresh());
 
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppConstants.routeLogin,
     refreshListenable: notifier,
     redirect: (context, state) {
@@ -123,12 +128,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'new',
-                parentNavigatorKey: _rootNavigatorKey,
+                parentNavigatorKey: rootNavigatorKey,
                 builder: (_, __) => const EntryEditorScreen(),
               ),
               GoRoute(
                 path: 'edit/:id',
-                parentNavigatorKey: _rootNavigatorKey,
+                parentNavigatorKey: rootNavigatorKey,
                 builder: (_, state) =>
                     EntryEditorScreen(entryId: state.pathParameters['id']),
               ),
@@ -141,7 +146,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'milestones',
-                parentNavigatorKey: _rootNavigatorKey,
+                parentNavigatorKey: rootNavigatorKey,
                 builder: (_, __) => const MilestonesScreen(),
               ),
             ],
@@ -201,6 +206,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppConstants.routeResourceDetail,
         builder: (_, state) =>
             ResourceDetailScreen(resource: state.extra as ResourceItem),
+      ),
+      // Craving Shield — opened via notification tap or from Focus screen
+      GoRoute(
+        path: AppConstants.routeCravingShield,
+        builder: (_, state) {
+          final addiction = state.uri.queryParameters['addiction'] ?? 'other';
+          return CravingShieldScreen(addictionKey: addiction);
+        },
+      ),
+
+      // ── Phase 1 health routes ──────────────────────────────────────────────
+      GoRoute(
+        path: AppConstants.routeWater,
+        builder: (_, __) => const WaterScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.routeSleep,
+        builder: (_, __) => const SleepScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.routeDiscipline,
+        builder: (_, __) => const DisciplineScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.routeWorkoutLog,
+        builder: (_, __) => const WorkoutLogScreen(),
       ),
     ],
   );

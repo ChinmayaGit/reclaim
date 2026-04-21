@@ -1022,6 +1022,159 @@ class ResourcesData {
         'Recommended: Search "trauma sensitive yoga" or "Bessel van der Kolk yoga '
         'trauma" on YouTube. The Trauma Center in Boston has excellent free content.',
     ),
+
+    // ── Gym · Habits · Discipline (life training) ─────────────────────────
+
+    ResourceItem(
+      id: 'article_gym_basics',
+      title: 'Training Basics That Stick',
+      description: 'Progressive overload, rest, and logging — without burning out.',
+      emoji: '🏋️',
+      type: 'article',
+      categories: ['gym', 'habits', 'discipline'],
+      isPremium: false,
+      duration: '6 min read',
+      sections: [
+        ContentSection(type: 'paragraph', content:
+          'You do not need a perfect program on day one. You need a simple loop: '
+          'show up, log what you did, sleep, repeat. Recovery and fitness both reward '
+          'consistency more than intensity spikes.'),
+        ContentSection(type: 'heading', content: 'Log every session'),
+        ContentSection(type: 'paragraph', content:
+          'Write sets, reps, and weight (or time for cardio). The log is proof you '
+          'are moving forward — and it tells you when to add a little load or one more rep.'),
+        ContentSection(type: 'heading', content: 'Progressive overload'),
+        ContentSection(type: 'paragraph', content:
+          'Each week, aim for one small improvement: one more rep, slightly more weight, '
+          'or better form on the same load. Tiny steps compound.'),
+        ContentSection(type: 'tip', content:
+          'Use Reclaim’s Gym log on Home to track exercises like a simple workout journal.'),
+      ],
+    ),
+
+    ResourceItem(
+      id: 'article_habit_stack',
+      title: 'Habit Stacking for Recovery',
+      description: 'Attach new habits to anchors you already do every day.',
+      emoji: '🔗',
+      type: 'article',
+      categories: ['habits', 'discipline', 'addiction'],
+      isPremium: false,
+      duration: '5 min read',
+      sections: [
+        ContentSection(type: 'paragraph', content:
+          'After I [current habit], I will [new habit]. Examples: after I brush my teeth, '
+          'I will take three deep breaths. After I pour morning coffee, I will write one line in my journal.'),
+        ContentSection(type: 'heading', content: 'Keep the new habit tiny'),
+        ContentSection(type: 'paragraph', content:
+          'If it takes less than two minutes, you are far more likely to keep it. '
+          'You can always scale up once the chain is unbroken.'),
+        ContentSection(type: 'quote', content:
+          '"You do not rise to the level of your goals. You fall to the level of your systems." — James Clear'),
+      ],
+    ),
+
+    ResourceItem(
+      id: 'article_discipline_nonnegotiables',
+      title: 'Non‑Negotiables & Deep Work',
+      description: 'Protect focus blocks the same way you protect meetings.',
+      emoji: '🎯',
+      type: 'article',
+      categories: ['discipline', 'habits', 'stress'],
+      isPremium: false,
+      duration: '6 min read',
+      sections: [
+        ContentSection(type: 'paragraph', content:
+          'Pick one to three non‑negotiables per day: movement, sleep window, or a '
+          'focus block without your phone. Treat them like appointments you cannot cancel.'),
+        ContentSection(type: 'heading', content: 'Deep work blocks'),
+        ContentSection(type: 'bullet', content: 'Same time each day when possible — your brain loves rhythm.'),
+        ContentSection(type: 'bullet', content: 'Phone in another room or airplane mode.'),
+        ContentSection(type: 'bullet', content: 'End with a 60‑second review: what moved forward?'),
+        ContentSection(type: 'tip', content:
+          'Pair with Reclaim’s Pomodoro on the Focus tab for timed work/rest cycles.'),
+      ],
+    ),
+
+    ResourceItem(
+      id: 'audio_walk_reset',
+      title: '10‑Minute Walk Reset',
+      description: 'Light movement between desk blocks — good for body and cravings.',
+      emoji: '🚶',
+      type: 'audio',
+      categories: ['gym', 'habits', 'stress'],
+      isPremium: false,
+      duration: '10 min',
+      steps: [
+        GuideStep(
+          instruction: 'Stand up. Roll your shoulders back three times.',
+          durationSeconds: 15,
+          cue: 'Wake the body…',
+        ),
+        GuideStep(
+          instruction: 'Walk slowly for two minutes. Notice heel, arch, toe on each step.',
+          durationSeconds: 120,
+          cue: 'Mindful steps…',
+        ),
+        GuideStep(
+          instruction: 'Pick up pace slightly. Breathe in for three steps, out for three.',
+          durationSeconds: 180,
+          cue: 'Steady rhythm…',
+        ),
+        GuideStep(
+          instruction: 'Slow down. Name one thing you will do next with full attention.',
+          durationSeconds: 60,
+          cue: 'Set intention…',
+        ),
+        GuideStep(
+          instruction: 'You are done. Sip water and return refreshed.',
+          durationSeconds: 10,
+          cue: 'Complete.',
+        ),
+      ],
+    ),
+
+    ResourceItem(
+      id: 'ws_gym_session',
+      title: 'Session Plan (Push / Pull / Legs)',
+      description: 'Sketch today’s lifts before you hit the floor.',
+      emoji: '📋',
+      type: 'worksheet',
+      categories: ['gym', 'discipline'],
+      isPremium: false,
+      duration: '10 min',
+      fields: [
+        WorksheetField(
+          id: 'day_type',
+          label: 'Today is (push / pull / legs / other)',
+          hint: 'e.g. Push — chest, shoulders, triceps',
+        ),
+        WorksheetField(
+          id: 'warmup',
+          label: 'Warm‑up (5–10 min)',
+          hint: 'Bike, row, dynamic stretches…',
+          multiline: true,
+        ),
+        WorksheetField(
+          id: 'main_lifts',
+          label: 'Main lifts (exercise · target sets × reps)',
+          hint: 'Bench 4×6, OHP 3×8…',
+          multiline: true,
+        ),
+        WorksheetField(
+          id: 'accessory',
+          label: 'Accessory / finisher',
+          hint: 'Optional — curls, core, carries…',
+          multiline: true,
+        ),
+        WorksheetField(
+          id: 'exit_note',
+          label: 'One line after the session',
+          hint: 'Energy 1–10, what to adjust next time',
+          multiline: true,
+        ),
+      ],
+    ),
   ];
 
   /// Filter resources by type and optionally by category.

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import '../data/ambient_tracks.dart';
+import '../data/ambient_download_manager.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// Full-screen ambient sound player.
 ///
-/// Tracks are royalty-free audio (SoundJay / CC0).
-/// Audio is streamed via just_audio's setUrl — looped continuously.
+/// Tracks are downloaded to local storage on first visit for offline playback.
+/// Audio plays from local files via just_audio — looped continuously.
 class AmbientPlayerScreen extends StatefulWidget {
   const AmbientPlayerScreen({super.key, this.initialTrackId});
 
@@ -40,18 +41,32 @@ class _AmbientPlayerScreenState extends State<AmbientPlayerScreen>
 
     _player = AudioPlayer();
 
-    _initSession().then((_) {
-      final initial = widget.initialTrackId != null
-          ? AmbientTracks.all.firstWhere(
-              (t) => t.id == widget.initialTrackId,
-              orElse: () => AmbientTracks.all.first)
-          : AmbientTracks.all.first;
-      _loadTrack(initial);
-    });
-
     _player.playerStateStream.listen((_) {
       if (mounted) setState(() {});
     });
+
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _initSession();
+
+    final downloaded = await AmbientDownloadManager.areTracksDownloaded();
+    if (!downloaded && mounted) {
+      await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _DownloadDialog(),
+      );
+    }
+
+    if (!mounted) return;
+    final initial = widget.initialTrackId != null
+        ? AmbientTracks.all.firstWhere(
+            (t) => t.id == widget.initialTrackId,
+            orElse: () => AmbientTracks.all.first)
+        : AmbientTracks.all.first;
+    _loadTrack(initial);
   }
 
   Future<void> _initSession() async {
@@ -71,7 +86,7 @@ class _AmbientPlayerScreenState extends State<AmbientPlayerScreen>
   }
 
   Future<void> _loadTrack(AmbientTrack track) async {
-    if (_current?.id == track.id) {
+    if (_current?.id == track.id && _error == null) {
       _togglePlayPause();
       return;
     }
@@ -97,7 +112,12 @@ class _AmbientPlayerScreenState extends State<AmbientPlayerScreen>
 
     try {
       await _player.setLoopMode(LoopMode.one);
-      await _player.setUrl(track.storageUrl);
+      final localPath = await AmbientDownloadManager.getLocalPath(track);
+      if (localPath != null) {
+        await _player.setFilePath(localPath);
+      } else {
+        await _player.setUrl(track.storageUrl);
+      }
       setState(() {
         _loading = false;
         _audioReady = true;
@@ -112,12 +132,25 @@ class _AmbientPlayerScreenState extends State<AmbientPlayerScreen>
   }
 
   void _togglePlayPause() {
+    if (_error != null && _current != null) {
+      _retryCurrentTrack();
+      return;
+    }
     if (!_audioReady) return;
     if (_player.playing) {
       _player.pause();
     } else {
       _player.play();
     }
+  }
+
+  Future<void> _retryCurrentTrack() async {
+    final track = _current!;
+    setState(() {
+      _current = null;
+    });
+    await _loadTrack(track);
+    if (_audioReady) await _player.play();
   }
 
   @override
@@ -552,6 +585,174 @@ class _AmbientPlayerScreenState extends State<AmbientPlayerScreen>
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ONE-TIME DOWNLOAD DIALOG
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DownloadDialog extends StatefulWidget {
+  const _DownloadDialog();
+
+  @override
+  State<_DownloadDialog> createState() => _DownloadDialogState();
+}
+
+class _DownloadDialogState extends State<_DownloadDialog> {
+  bool _downloading = false;
+  bool _done = false;
+  int _completed = 0;
+  int _total = 0;
+  List<String> _failed = [];
+
+  int get _totalTracks =>
+      AmbientTracks.all.where((t) => t.isAvailable).length;
+
+  Future<void> _startDownload() async {
+    setState(() {
+      _downloading = true;
+      _done = false;
+      _failed = [];
+      _total = _totalTracks;
+    });
+    final failed = await AmbientDownloadManager.downloadAll(
+      onProgress: (completed, total, failedNames) {
+        if (mounted) {
+          setState(() {
+            _completed = completed;
+            _total = total;
+            _failed = failedNames;
+          });
+        }
+      },
+    );
+    if (!mounted) return;
+    setState(() {
+      _downloading = false;
+      _done = true;
+      _failed = failed;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF152019),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Icon(
+            _done && _failed.isEmpty
+                ? Icons.check_circle_rounded
+                : Icons.download_rounded,
+            color: _done && _failed.isEmpty
+                ? AppColors.green400
+                : AppColors.teal400,
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _done ? 'Download Complete' : 'Download Sounds',
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!_downloading && !_done)
+            Text(
+              'Download all $_totalTracks ambient tracks for offline playback. '
+              'This is a one-time download.',
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 14, height: 1.5),
+            ),
+          if (_downloading) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: _total > 0 ? _completed / _total : 0,
+                backgroundColor: Colors.white12,
+                valueColor:
+                    const AlwaysStoppedAnimation(AppColors.teal400),
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '$_completed of $_total tracks…',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ],
+          if (_done && _failed.isEmpty)
+            const Text(
+              'All tracks ready for offline playback!',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          if (_done && _failed.isNotEmpty) ...[
+            Text(
+              '${_total - _failed.length} of $_total tracks downloaded. '
+              '${_failed.length} failed:',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            ...(_failed.map((name) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    '  · $name',
+                    style: const TextStyle(
+                        color: AppColors.amber400, fontSize: 12),
+                  ),
+                ))),
+            const SizedBox(height: 8),
+            const Text(
+              'Failed tracks will stream when played.',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        if (!_downloading)
+          TextButton(
+            onPressed: () => Navigator.pop(context, _done),
+            child: Text(
+              _done ? 'Done' : 'Skip',
+              style: TextStyle(
+                color: _done ? AppColors.teal400 : Colors.white38,
+              ),
+            ),
+          ),
+        if (!_downloading && !_done)
+          ElevatedButton.icon(
+            onPressed: _startDownload,
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: const Text('Download'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.teal400,
+              foregroundColor: Colors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+          ),
+        if (_done && _failed.isNotEmpty)
+          ElevatedButton.icon(
+            onPressed: _startDownload,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Retry Failed'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.teal400,
+              foregroundColor: Colors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+          ),
+      ],
     );
   }
 }

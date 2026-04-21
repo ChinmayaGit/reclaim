@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
+  static const _fontFamily = '.AppleSystemUIFont';
+  static const _fallback = 'sans-serif';
+
+  static String get _ff => _fontFamily;
+
   // ── Light ────────────────────────────────────────────────────────────
   static ThemeData get light => _build(
     brightness: Brightness.light,
@@ -75,38 +79,43 @@ class AppTheme {
       scaffoldBackgroundColor: scaffoldBg,
       cardColor: cardColor,
       dividerColor: dividerColor,
+      fontFamily: _ff,
+      fontFamilyFallback: const [_fallback],
     );
 
     return base.copyWith(
-      textTheme: GoogleFonts.dmSansTextTheme(base.textTheme).copyWith(
-        displayLarge: GoogleFonts.dmSerifDisplay(
-          fontSize: 32, fontWeight: FontWeight.w400, color: titleColor,
+      textTheme: base.textTheme.copyWith(
+        displayLarge: TextStyle(
+          fontSize: 32, fontWeight: FontWeight.w700, color: titleColor,
+          letterSpacing: -0.5,
         ),
-        displayMedium: GoogleFonts.dmSerifDisplay(
-          fontSize: 26, fontWeight: FontWeight.w400, color: titleColor,
+        displayMedium: TextStyle(
+          fontSize: 26, fontWeight: FontWeight.w700, color: titleColor,
+          letterSpacing: -0.3,
         ),
-        displaySmall: GoogleFonts.dmSerifDisplay(
-          fontSize: 22, fontWeight: FontWeight.w400, color: titleColor,
+        displaySmall: TextStyle(
+          fontSize: 22, fontWeight: FontWeight.w700, color: titleColor,
+          letterSpacing: -0.2,
         ),
-        headlineLarge: GoogleFonts.dmSans(
+        headlineLarge: TextStyle(
           fontSize: 20, fontWeight: FontWeight.w600, color: textPrimary,
         ),
-        headlineMedium: GoogleFonts.dmSans(
+        headlineMedium: TextStyle(
           fontSize: 18, fontWeight: FontWeight.w600, color: textPrimary,
         ),
-        headlineSmall: GoogleFonts.dmSans(
+        headlineSmall: TextStyle(
           fontSize: 16, fontWeight: FontWeight.w600, color: textPrimary,
         ),
-        bodyLarge: GoogleFonts.dmSans(
+        bodyLarge: TextStyle(
           fontSize: 15, fontWeight: FontWeight.w400, color: textPrimary,
         ),
-        bodyMedium: GoogleFonts.dmSans(
+        bodyMedium: TextStyle(
           fontSize: 13.5, fontWeight: FontWeight.w400, color: textSecondary,
         ),
-        bodySmall: GoogleFonts.dmSans(
+        bodySmall: TextStyle(
           fontSize: 12, fontWeight: FontWeight.w400, color: hintColor,
         ),
-        labelLarge: GoogleFonts.dmSans(
+        labelLarge: TextStyle(
           fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary,
         ),
       ),
@@ -117,40 +126,43 @@ class AppTheme {
         scrolledUnderElevation: 1,
         shadowColor: dividerColor,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.dmSerifDisplay(
-          fontSize: 20, color: titleColor,
+        titleTextStyle: TextStyle(
+          fontSize: 20, fontWeight: FontWeight.w700, color: titleColor,
+          letterSpacing: -0.2,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: navBg,
         indicatorColor: isDark ? AppColors.teal900 : AppColors.teal50,
         labelTextStyle: WidgetStateProperty.all(
-          GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w500),
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.teal400,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(50),
+          // Must be finite width: Size.fromHeight uses w=Infinity and breaks
+          // ElevatedButton inside Row / flex (ListView → Focus domain row).
+          minimumSize: const Size(48, 50),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           elevation: 0,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.teal400,
-          minimumSize: const Size.fromHeight(50),
+          minimumSize: const Size(48, 50),
           side: const BorderSide(color: AppColors.teal400),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.teal400,
-          textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w500),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -173,8 +185,8 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.coral400),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        hintStyle: GoogleFonts.dmSans(color: hintColor),
-        labelStyle: GoogleFonts.dmSans(color: textSecondary),
+        hintStyle: TextStyle(color: hintColor),
+        labelStyle: TextStyle(color: textSecondary),
       ),
       cardTheme: CardThemeData(
         color: cardColor,
@@ -188,7 +200,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: isDark ? AppColors.slate100Dk : AppColors.slate100,
         selectedColor: isDark ? AppColors.teal900 : AppColors.teal50,
-        labelStyle: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w500),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         side: BorderSide.none,
@@ -197,7 +209,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         backgroundColor: isDark ? const Color(0xFF2A3A4F) : AppColors.slate900,
-        contentTextStyle: GoogleFonts.dmSans(color: Colors.white, fontSize: 13),
+        contentTextStyle: const TextStyle(color: Colors.white, fontSize: 13),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.teal400,

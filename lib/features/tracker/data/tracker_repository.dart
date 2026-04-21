@@ -63,10 +63,14 @@ class TrackerRepository {
           ? newStreak
           : tracker.longestStreak;
 
+      final dateStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
       tx.update(_trackerDoc(uid), {
         'lastCheckIn': Timestamp.fromDate(now),
         'currentStreakDays': newStreak,
         'longestStreak': newLongest,
+        'checkInDates': FieldValue.arrayUnion([dateStr]),
       });
     });
   }

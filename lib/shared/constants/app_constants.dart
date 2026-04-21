@@ -93,4 +93,11 @@ class AppConstants {
   static const String routeFocus = '/focus';
   static const String routeAmbient = '/ambient';
   static const String routeResourceDetail = '/resources/detail';
+  static const String routeCravingShield = '/craving-shield';
+
+  // ── Phase 1 health routes ──────────────────────────────────────────────────
+  static const String routeWater      = '/water';
+  static const String routeSleep      = '/sleep';
+  static const String routeDiscipline = '/discipline';
+  static const String routeWorkoutLog = '/workout-log';
 }

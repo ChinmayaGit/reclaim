@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
+import '../data/ambient_download_manager.dart';
 import '../data/resource_model.dart';
 import 'video_embed_screen.dart';
 
@@ -21,9 +22,9 @@ const _kSoundOptions = [
   _SoundOption('🌧️', 'Rain',
       'https://archive.org/download/naturesounds-soundtheraphy/Light%20Gentle%20Rain.mp3'),
   _SoundOption('🌊', 'Ocean',
-      'https://upload.wikimedia.org/wikipedia/commons/3/3b/Bubbling_Waterfall_and_Ocean_Waves.ogg'),
+      'https://upload.wikimedia.org/wikipedia/commons/transcoded/1/1f/Waves.ogg/Waves.ogg.mp3'),
   _SoundOption('🌲', 'Forest',
-      'https://upload.wikimedia.org/wikipedia/commons/e/e7/Birdsong_morning_01.ogg'),
+      'https://upload.wikimedia.org/wikipedia/commons/transcoded/4/42/Bird_singing.ogg/Bird_singing.ogg.mp3'),
   _SoundOption('🔔', 'Bowls',
       'https://archive.org/download/singingbowlmeditation/Singing%20Bowl%20Meditation.mp3'),
 ];
@@ -247,13 +248,24 @@ class _AudioGuideScreenState extends State<_AudioGuideScreen> {
     return _kSoundOptions[4].url; // Singing Bowls
   }
 
-  Future<void> _startBgSound() async {
+  Future<void> _startBgSound({int attempt = 1}) async {
     if (_bgTrackUrl.isEmpty) return;
     try {
       await _bgPlayer.setLoopMode(LoopMode.one);
-      await _bgPlayer.setUrl(_bgTrackUrl);
+      final localPath =
+          await AmbientDownloadManager.getLocalPathForUrl(_bgTrackUrl);
+      if (localPath != null) {
+        await _bgPlayer.setFilePath(localPath);
+      } else {
+        await _bgPlayer.setUrl(_bgTrackUrl);
+      }
       await _bgPlayer.play();
-    } catch (_) {}
+    } catch (_) {
+      if (attempt < 3) {
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
+        await _startBgSound(attempt: attempt + 1);
+      }
+    }
   }
 
   Future<void> _selectSound(String url) async {
@@ -306,7 +318,7 @@ class _AudioGuideScreenState extends State<_AudioGuideScreen> {
       });
       _tick();
     } else {
-      _bgPlayer.stop();
+      _bgPlayer.pause();
       setState(() {
         _running = false;
         _completed = true;
@@ -343,7 +355,6 @@ class _AudioGuideScreenState extends State<_AudioGuideScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final step = _steps[_stepIndex];
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
       appBar: AppBar(
@@ -352,11 +363,11 @@ class _AudioGuideScreenState extends State<_AudioGuideScreen> {
         title: Text(widget.resource.title, style: const TextStyle(color: Colors.white, fontSize: 16)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: _completed ? _buildCompleted() : _buildPlayer(step),
+      body: _completed ? _buildCompleted() : _buildPlayer(),
     );
   }
 
-  Widget _buildPlayer(GuideStep step) {
+  Widget _buildPlayer() {
     return Column(
       children: [
         // Background sound picker
@@ -490,33 +501,6 @@ class _AudioGuideScreenState extends State<_AudioGuideScreen> {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 36),
-
-                // Cue text
-                if (_running && step.cue.isNotEmpty)
-                  Text(
-                    step.cue,
-                    style: const TextStyle(
-                      color: AppColors.teal400,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                const SizedBox(height: 16),
-
-                // Step instruction
-                Text(
-                  step.instruction,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    height: 1.55,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
 
