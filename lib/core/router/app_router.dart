@@ -15,7 +15,6 @@ import '../../features/resources/presentation/resources_screen.dart';
 import '../../features/community/presentation/community_screen.dart';
 import '../../features/sessions/presentation/sessions_screen.dart';
 import '../../features/crisis/presentation/crisis_screen.dart';
-import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/donation/presentation/donation_screen.dart';
@@ -27,6 +26,8 @@ import '../../features/resources/data/resource_model.dart';
 import '../../features/health/presentation/water_screen.dart';
 import '../../features/health/presentation/sleep_screen.dart';
 import '../../features/discipline/presentation/discipline_screen.dart';
+import '../../features/dashboard/presentation/day_recap_screen.dart';
+import '../../features/dashboard/presentation/habit_detail_screen.dart';
 import '../../features/workout_log/presentation/workout_log_screen.dart';
 import '../navigation/nav_key.dart';
 import '../shell/main_shell.dart';
@@ -179,10 +180,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const CrisisScreen(),
       ),
       GoRoute(
-        path: AppConstants.routeReports,
-        builder: (_, __) => const ReportsScreen(),
-      ),
-      GoRoute(
         path: AppConstants.routeSettings,
         builder: (_, __) => const SettingsScreen(),
       ),
@@ -232,6 +229,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.routeWorkoutLog,
         builder: (_, __) => const WorkoutLogScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.routeHabitDetail,
+        builder: (_, state) {
+          final id = state.uri.queryParameters['id'];
+          if (id == null || id.isEmpty) {
+            return const Scaffold(
+              body: Center(child: Text('Missing habit id')),
+            );
+          }
+          return HabitDetailScreen(habitId: id);
+        },
+      ),
+      GoRoute(
+        path: AppConstants.routeDayRecap,
+        builder: (_, state) {
+          final raw = state.uri.queryParameters['date'];
+          final parsed = DateTime.tryParse(raw ?? '');
+          final day = parsed != null
+              ? DateTime(parsed.year, parsed.month, parsed.day)
+              : DateTime.now();
+          return DayRecapScreen(day: day);
+        },
       ),
     ],
   );

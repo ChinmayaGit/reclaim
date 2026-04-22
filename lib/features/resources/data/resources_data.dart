@@ -937,9 +937,10 @@ class ResourcesData {
       emoji: '🎬',
       type: 'video',
       categories: ['addiction', 'trauma', 'breakup'],
+      videoTopic: 'stories',
       isPremium: false,
       duration: '18 min',
-      videoUrl: 'https://www.youtube.com/results?search_query=addiction+recovery+stories',
+      videoUrl: 'https://www.youtube.com/results?search_query=addiction+recovery+stories+TED',
       videoDescription:
         'Recovery looks different for everyone. These stories remind us that '
         'healing is possible — even when it feels impossible. Hear from real '
@@ -960,9 +961,10 @@ class ResourcesData {
       emoji: '💔',
       type: 'video',
       categories: ['breakup', 'trauma'],
+      videoTopic: 'therapy',
       isPremium: false,
       duration: '14 min',
-      videoUrl: 'https://www.youtube.com/results?search_query=grief+stages+psychology',
+      videoUrl: 'https://www.youtube.com/results?search_query=David+Kessler+grief+explained',
       videoDescription:
         'Grief is not a linear process, and it\'s not just about death. '
         'Breakups, loss of identity, loss of a relationship with substances, '
@@ -983,9 +985,10 @@ class ResourcesData {
       emoji: '🧩',
       type: 'video',
       categories: ['addiction', 'stress'],
+      videoTopic: 'therapy',
       isPremium: true,
       duration: '25 min',
-      videoUrl: 'https://www.youtube.com/results?search_query=CBT+addiction+cognitive+behavioural+therapy',
+      videoUrl: 'https://www.youtube.com/results?search_query=CBT+relapse+prevention+addiction+Judith+Beck',
       videoDescription:
         'Cognitive Behavioural Therapy (CBT) is one of the most evidence-based '
         'treatments for addiction and relapse prevention. This video explains '
@@ -1007,9 +1010,10 @@ class ResourcesData {
       emoji: '🧘',
       type: 'video',
       categories: ['trauma', 'stress'],
+      videoTopic: 'body',
       isPremium: true,
       duration: '30 min',
-      videoUrl: 'https://www.youtube.com/results?search_query=trauma+sensitive+yoga+beginner',
+      videoUrl: 'https://www.youtube.com/results?search_query=trauma+center+trauma+sensitive+yoga+10+minutes',
       videoDescription:
         'Trauma is stored in the body, not just the mind. Trauma-sensitive yoga '
         'uses gentle movement and breath to help the nervous system discharge '
@@ -1021,6 +1025,95 @@ class ResourcesData {
         '• Suitable for people with physical limitations\n\n'
         'Recommended: Search "trauma sensitive yoga" or "Bessel van der Kolk yoga '
         'trauma" on YouTube. The Trauma Center in Boston has excellent free content.',
+    ),
+
+    ResourceItem(
+      id: 'video_mindfulness_intro',
+      title: 'Mindfulness for Urges (10‑Minute Primer)',
+      description: 'Observe thoughts and cravings without acting — skills you can reuse daily.',
+      emoji: '🌿',
+      type: 'video',
+      categories: ['addiction', 'stress', 'habits'],
+      videoTopic: 'therapy',
+      isPremium: false,
+      duration: '10 min',
+      videoUrl: 'https://www.youtube.com/results?search_query=urge+surfing+mindfulness+addiction+10+minutes',
+      videoDescription:
+        'Urge surfing and “name it to tame it” are staples of relapse prevention. '
+        'This style of practice helps you stay with discomfort until it crests and falls.\n\n'
+        'Try searches: “urge surfing mindfulness”, “SOBER breathing exercise”, or '
+        '“cravings mindfulness UCLA MARC”.',
+    ),
+
+    ResourceItem(
+      id: 'video_sleep_recovery',
+      title: 'Sleep, Cravings & Recovery',
+      description: 'Why sleep debt spikes impulsivity — and how to protect a wind‑down window.',
+      emoji: '🌙',
+      type: 'video',
+      categories: ['addiction', 'stress', 'habits'],
+      videoTopic: 'science',
+      isPremium: false,
+      duration: '12 min',
+      videoUrl: 'https://www.youtube.com/results?search_query=sleep+deprivation+impulsivity+addiction+recovery+Matthew+Walker',
+      videoDescription:
+        'Sleep is not “soft” self‑care — it is frontal‑lobe fuel. Short nights nudge the same '
+        'brain circuits that make urges louder.\n\n'
+        'Look for: Matthew Walker sleep impulsivity, Huberman sleep toolkit, or '
+        '“sleep hygiene CBTI” for structured wind‑down routines.',
+    ),
+
+    ResourceItem(
+      id: 'video_dopamine_reset',
+      title: 'Dopamine & Reward: Motivation After Quitting',
+      description: 'Understand flat periods after you stop — and how healthy rewards help.',
+      emoji: '⚡',
+      type: 'video',
+      categories: ['addiction', 'habits', 'discipline'],
+      videoTopic: 'motivation',
+      isPremium: true,
+      duration: '16 min',
+      videoUrl: 'https://www.youtube.com/results?search_query=Anna+Lembke+dopamine+detox+reward+system+explained',
+      videoDescription:
+        'Many people hit anhedonia (“nothing feels good”) early in abstinence. '
+        'That is often a healing brain recalibrating reward thresholds — not proof recovery failed.\n\n'
+        'Search: “Anna Lembke dopamine”, “reward deficiency addiction”, or '
+        '“behavioral activation depression motivation”.',
+    ),
+
+    ResourceItem(
+      id: 'video_neuroscience_addiction',
+      title: 'Addiction as a Brain Disease (Explainer)',
+      description: 'Clear, non‑judgemental science on circuits, tolerance, and healing time.',
+      emoji: '🧠',
+      type: 'video',
+      categories: ['addiction', 'trauma'],
+      videoTopic: 'science',
+      isPremium: false,
+      duration: '15 min',
+      videoUrl: 'https://www.youtube.com/results?search_query=Nora+Volkow+addiction+brain+disease+explained',
+      videoDescription:
+        'NIDA‑aligned framing: addiction involves learning, stress systems, and executive control — '
+        'not a moral failing.\n\n'
+        'Try: “Nora Volkow addiction brain”, “ASAM definition addiction”, or '
+        '“Huberman alcohol neuroscience” for deeper dives.',
+    ),
+
+    ResourceItem(
+      id: 'video_peer_support',
+      title: 'Peer Support & SMART / 12‑Step (Orientation)',
+      description: 'What happens in groups — and how to pick a format that fits you.',
+      emoji: '🤝',
+      type: 'video',
+      categories: ['addiction', 'breakup'],
+      videoTopic: 'motivation',
+      isPremium: false,
+      duration: '11 min',
+      videoUrl: 'https://www.youtube.com/results?search_query=SMART+Recovery+meeting+what+to+expect+orientation',
+      videoDescription:
+        'Community is a protective factor. This entry points you to respectful, evidence‑friendly '
+        'overviews before you walk into a room (virtual or in‑person).\n\n'
+        'Search: “SMART Recovery tools”, “AA newcomer expectations”, or “recovery capital peer support”.',
     ),
 
     // ── Gym · Habits · Discipline (life training) ─────────────────────────
@@ -1178,11 +1271,26 @@ class ResourcesData {
   ];
 
   /// Filter resources by type and optionally by category.
-  static List<ResourceItem> byType(String type, {String category = 'all'}) {
+  /// For `type == video`, [videoTopic] and [videoSearch] narrow the list further.
+  static List<ResourceItem> byType(
+    String type, {
+    String category = 'all',
+    String videoTopic = 'all',
+    String videoSearch = '',
+  }) {
+    final q = videoSearch.trim().toLowerCase();
     return all.where((r) {
       final typeMatch = r.type == type;
       final catMatch = category == 'all' || r.categories.contains(category);
-      return typeMatch && catMatch;
+      if (!typeMatch || !catMatch) return false;
+      if (type != 'video') return true;
+      final topic = r.videoTopic ?? 'general';
+      final topicMatch = videoTopic == 'all' || topic == videoTopic;
+      if (!topicMatch) return false;
+      if (q.isEmpty) return true;
+      final blob =
+          '${r.title} ${r.description} ${r.videoDescription ?? ''}'.toLowerCase();
+      return blob.contains(q);
     }).toList();
   }
 }

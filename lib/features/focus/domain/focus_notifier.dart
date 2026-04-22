@@ -8,7 +8,7 @@ import '../data/usage_channel.dart';
 
 export '../data/usage_channel.dart' show AppUsageStat;
 export '../data/focus_model.dart'
-    show AppUsageTrackedApp, FocusSettings, snapFocusLimitMinutes;
+    show AppScheduleEntry, AppUsageTrackedApp, FocusSettings, snapFocusLimitMinutes;
 
 // ── Repository singleton ─────────────────────────────────────────────────────
 
@@ -30,16 +30,48 @@ class FocusNotifier extends StateNotifier<FocusSettings> {
     await _focusRepo.save(s);
   }
 
-  Future<void> setSchedule({
-    required bool enabled,
-    int? startHour,
-    int? endHour,
-  }) =>
-      _save(state.copyWith(
-        scheduleEnabled: enabled,
-        scheduleStartHour: startHour ?? state.scheduleStartHour,
-        scheduleEndHour: endHour ?? state.scheduleEndHour,
-      ));
+  Future<void> setScheduleEnabled(bool enabled) =>
+      _save(state.copyWith(scheduleEnabled: enabled));
+
+  Future<void> addScheduleApp({
+    required String packageName,
+    required String displayName,
+  }) async {
+    if (state.scheduleApps.any((e) => e.packageName == packageName)) {
+      return;
+    }
+    await _save(state.copyWith(scheduleApps: [
+      ...state.scheduleApps,
+      AppScheduleEntry(
+        packageName: packageName,
+        displayName: displayName,
+        startHour: 7,
+        endHour: 22,
+      ),
+    ]));
+  }
+
+  Future<void> removeScheduleApp(String packageName) async {
+    final list = state.scheduleApps
+        .where((e) => e.packageName != packageName)
+        .toList();
+    await _save(state.copyWith(scheduleApps: list));
+  }
+
+  Future<void> setScheduleAppHours(
+    String packageName, {
+    required int startHour,
+    required int endHour,
+  }) async {
+    final sh = startHour.clamp(0, 23);
+    final eh = endHour.clamp(0, 23);
+    final list = state.scheduleApps
+        .map((e) => e.packageName == packageName
+            ? e.copyWith(startHour: sh, endHour: eh)
+            : e)
+        .toList();
+    await _save(state.copyWith(scheduleApps: list));
+  }
 
   Future<void> setLinkBlocking(bool enabled) =>
       _save(state.copyWith(linkBlockingEnabled: enabled));
@@ -223,9 +255,8 @@ final lockReasonProvider = Provider<String?>((ref) {
   if (settings.isSnoozed) return null;
 
   if (settings.isOutsideSchedule) {
-    final start = _fmtHour(settings.scheduleStartHour);
-    final end = _fmtHour(settings.scheduleEndHour);
-    return 'App is scheduled to be available $start – $end.\nCome back then.';
+    return 'You’re outside the hours when Reclaim is allowed on this device.\n'
+        'Open Focus & Block → App schedule to review each app’s allowed window.';
   }
 
   final snap = ref.watch(usageNotifierProvider);
@@ -239,9 +270,3 @@ final lockReasonProvider = Provider<String?>((ref) {
   }
   return null;
 });
-
-String _fmtHour(int hour) {
-  final suffix = hour < 12 ? 'AM' : 'PM';
-  final h = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-  return '$h:00 $suffix';
-}

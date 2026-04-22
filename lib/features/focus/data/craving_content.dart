@@ -1,5 +1,5 @@
 // Curated content shown in the Craving Shield screen per addiction type.
-// Videos open as YouTube searches (always fresh content).
+// Videos: category + optional in-app embed ([youtubeVideoId]); otherwise a targeted YouTube search.
 // Stories are factual, evidence-based consequence narratives.
 // Sounds use the existing ambient audio URLs.
 
@@ -8,12 +8,27 @@ class CravingVideo {
     required this.title,
     required this.description,
     required this.searchQuery,
+    this.categoryId = 'science',
+    this.youtubeVideoId,
   });
   final String title, description, searchQuery;
+  /// One of [kCravingVideoCategories] ids (except `all`).
+  final String categoryId;
+  /// When set, opens an in-app embed instead of the search results page.
+  final String? youtubeVideoId;
 
   String get youtubeSearchUrl =>
       'https://m.youtube.com/results?search_query=${Uri.encodeQueryComponent(searchQuery)}';
 }
+
+/// Filter chips for Craving Shield → Videos tab.
+const kCravingVideoCategories = <(String, String)>[
+  ('all', 'All'),
+  ('science', 'Science & health'),
+  ('stories', 'Real stories'),
+  ('recovery', 'Recovery'),
+  ('awareness', 'How it hooks you'),
+];
 
 class CravingStory {
   const CravingStory({
@@ -53,6 +68,13 @@ class AddictionContent {
   final List<CravingSound> sounds;
 }
 
+String cravingVideoCategoryLabel(String id) {
+  for (final c in kCravingVideoCategories) {
+    if (c.$1 == id) return c.$2;
+  }
+  return id;
+}
+
 // ── Audio URLs (from ambient catalog) ─────────────────────────────────────────
 
 const _ocean   = 'https://upload.wikimedia.org/wikipedia/commons/transcoded/1/1f/Waves.ogg/Waves.ogg.mp3';
@@ -72,17 +94,21 @@ const Map<String, AddictionContent> cravingContent = {
       CravingVideo(
         title: 'Real Stories: The Cost of Alcohol',
         description: 'Personal accounts of how alcohol dependency changed lives, health, and families.',
-        searchQuery: 'alcohol addiction real stories documentary consequences',
+        searchQuery: 'alcohol use disorder documentary personal testimonial interview "long term recovery"',
+        categoryId: 'stories',
       ),
       CravingVideo(
-        title: 'What Alcohol Does to Your Brain',
-        description: 'The neuroscience of how alcohol physically rewires your brain over time.',
-        searchQuery: 'alcohol addiction brain science what it does inside',
+        title: 'Connection & addiction (TED)',
+        description: 'A widely cited talk on pain, dependency, and what actually helps.',
+        searchQuery: 'Johann Hari TED addiction everything you think you know is wrong',
+        categoryId: 'science',
+        youtubeVideoId: 'PY9DcIMGxMs',
       ),
       CravingVideo(
         title: 'Recovering: Life After Alcohol',
         description: 'Inspiring real accounts of people who got sober and rebuilt their lives.',
-        searchQuery: 'alcohol addiction recovery sober real story motivation',
+        searchQuery: 'sobriety story alcohol free one year "before and after" interview documentary',
+        categoryId: 'recovery',
       ),
     ],
     stories: [
@@ -119,17 +145,20 @@ const Map<String, AddictionContent> cravingContent = {
       CravingVideo(
         title: 'Inside the Brain on Drugs',
         description: 'How substances permanently alter dopamine pathways and motivation systems.',
-        searchQuery: 'drug addiction brain dopamine documentary what happens',
+        searchQuery: 'NIDA drug addiction brain reward dopamine explained documentary PBS',
+        categoryId: 'science',
       ),
       CravingVideo(
         title: 'The Overdose Crisis: Real Stories',
         description: 'Families and survivors speak about the reality of addiction and overdose.',
-        searchQuery: 'drug overdose crisis real family stories documentary',
+        searchQuery: 'fentanyl overdose documentary family story "harm reduction" 2023 2024',
+        categoryId: 'stories',
       ),
       CravingVideo(
         title: 'Recovery Is Possible',
         description: 'Stories of people who hit rock bottom and built remarkable lives in recovery.',
-        searchQuery: 'drug addiction recovery real story sober motivation',
+        searchQuery: 'opioid recovery documentary "medication assisted treatment" personal story',
+        categoryId: 'recovery',
       ),
     ],
     stories: [
@@ -166,17 +195,20 @@ const Map<String, AddictionContent> cravingContent = {
       CravingVideo(
         title: 'The Psychology of Gambling Addiction',
         description: 'How casinos and apps are engineered to exploit the brain\'s reward system.',
-        searchQuery: 'gambling addiction psychology documentary how it works brain',
+        searchQuery: 'problem gambling documentary variable reward schedule explained neuroscience',
+        categoryId: 'awareness',
       ),
       CravingVideo(
         title: 'Real Stories: When Gambling Took Everything',
         description: 'Personal accounts of financial ruin, family loss, and the road back.',
-        searchQuery: 'gambling addiction real story lost everything documentary',
+        searchQuery: 'sports betting addiction documentary personal story debt recovery interview',
+        categoryId: 'stories',
       ),
       CravingVideo(
         title: 'Breaking Free: Gambling Recovery',
         description: 'How people rebuild their finances and relationships after gambling addiction.',
-        searchQuery: 'gambling addiction recovery financial rebuild story',
+        searchQuery: 'gamblers anonymous recovery story documentary financial rebuild',
+        categoryId: 'recovery',
       ),
     ],
     stories: [
@@ -213,17 +245,20 @@ const Map<String, AddictionContent> cravingContent = {
       CravingVideo(
         title: 'What Smoking Does to Your Body',
         description: 'A clear visual breakdown of how every cigarette affects your lungs, heart, and arteries.',
-        searchQuery: 'smoking what it does to your body documentary health effects',
+        searchQuery: 'smoking health effects documentary lungs COPD explained NHS CDC',
+        categoryId: 'science',
       ),
       CravingVideo(
         title: 'Real Stories: Quitting Smoking',
         description: 'People who quit after 10, 20, 30 years — and what changed.',
-        searchQuery: 'quitting smoking real success stories 20 years health recovery',
+        searchQuery: 'quit smoking success story documentary "cold turkey" motivation interview',
+        categoryId: 'stories',
       ),
       CravingVideo(
         title: 'The Nicotine Trap: How It Hooks You',
         description: 'The science of nicotine addiction — why every craving only lasts 3 minutes.',
-        searchQuery: 'nicotine addiction science 3 minute craving how brain hooked',
+        searchQuery: 'nicotine withdrawal timeline craving peaks minutes explained science',
+        categoryId: 'awareness',
       ),
     ],
     stories: [
@@ -260,17 +295,20 @@ const Map<String, AddictionContent> cravingContent = {
       CravingVideo(
         title: 'The Social Dilemma — Documentary',
         description: 'Former tech engineers reveal how social media platforms are designed to be addictive.',
-        searchQuery: 'social dilemma documentary social media addiction designed',
+        searchQuery: '"The Social Dilemma" documentary full interview Tristan Harris',
+        categoryId: 'awareness',
       ),
       CravingVideo(
         title: 'Social Media and Mental Health: The Evidence',
         description: 'What research actually shows about anxiety, depression, and screen time.',
-        searchQuery: 'social media mental health depression anxiety research documentary',
+        searchQuery: 'social media depression anxiety research study explained documentary',
+        categoryId: 'science',
       ),
       CravingVideo(
         title: 'Digital Detox: Life After Quitting',
         description: 'People who deleted social media apps and what happened to their lives.',
-        searchQuery: 'quit social media digital detox real story changed life',
+        searchQuery: 'deleted instagram 30 days experiment documentary mental health results',
+        categoryId: 'recovery',
       ),
     ],
     stories: [
@@ -307,17 +345,20 @@ const Map<String, AddictionContent> cravingContent = {
       CravingVideo(
         title: 'The Science of Craving',
         description: 'How cravings form in the brain and why urge surfing works.',
-        searchQuery: 'craving science brain urge surfing addiction documentary',
+        searchQuery: 'urge surfing mindfulness craving wave documentary addiction science',
+        categoryId: 'science',
       ),
       CravingVideo(
         title: 'Breaking the Habit Loop',
         description: 'The neuroscience of habits and how to replace destructive ones.',
-        searchQuery: 'breaking addiction habit loop brain documentary science',
+        searchQuery: 'habit loop cue routine reward Charles Duhigg explained documentary',
+        categoryId: 'awareness',
       ),
       CravingVideo(
         title: 'Real Recovery: Against the Odds',
         description: 'Stories of people who overcame addiction and built meaningful lives.',
-        searchQuery: 'addiction recovery real story motivation against the odds sober',
+        searchQuery: 'behavioral addiction recovery documentary personal story "one day at a time"',
+        categoryId: 'stories',
       ),
     ],
     stories: [

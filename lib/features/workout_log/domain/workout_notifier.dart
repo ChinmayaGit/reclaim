@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/exercise_db_models.dart';
+import '../data/exercise_guide_catalog.dart';
 import '../data/workout_models.dart';
 import '../data/workout_repository.dart';
 
@@ -8,10 +10,16 @@ class WorkoutLogState {
   const WorkoutLogState({
     this.active,
     this.history = const [],
+    this.guideFavoriteIds = const [],
+    this.apiGuideFavorites = const [],
   });
 
   final ActiveWorkout? active;
   final List<FinishedWorkout> history;
+  /// [ExerciseGuideEntry.id] values saved as user favorites (curated catalog).
+  final List<String> guideFavoriteIds;
+  /// ExerciseDB favorites (id + display fields for GIF URLs).
+  final List<ApiGuideFavorite> apiGuideFavorites;
 
   WorkoutWeekStats weekStats(DateTime now) {
     final cutoff = now.subtract(const Duration(days: 7));
@@ -51,7 +59,14 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
   Future<void> _load() async {
     final hist = await _workoutRepo.loadHistory();
     final draft = await _workoutRepo.loadDraft();
-    state = WorkoutLogState(active: draft, history: hist);
+    final favs = await _workoutRepo.loadGuideFavorites();
+    final apiFavs = await _workoutRepo.loadApiGuideFavorites();
+    state = WorkoutLogState(
+      active: draft,
+      history: hist,
+      guideFavoriteIds: favs,
+      apiGuideFavorites: apiFavs,
+    );
     if (draft == null) {
       await startNewSession(title: 'Workout');
     }
@@ -64,7 +79,12 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
       startedAt: DateTime.now(),
       exercises: const [],
     );
-    state = WorkoutLogState(active: w, history: state.history);
+    state = WorkoutLogState(
+      active: w,
+      history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
+    );
     await _workoutRepo.saveDraft(w);
   }
 
@@ -78,6 +98,8 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
     state = WorkoutLogState(
       active: a.copyWith(title: title),
       history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
     );
     await _persistActive();
   }
@@ -96,6 +118,8 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
     state = WorkoutLogState(
       active: a.copyWith(exercises: [...a.exercises, ex]),
       history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
     );
     await _persistActive();
   }
@@ -108,6 +132,8 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
         exercises: a.exercises.where((e) => e.id != exerciseId).toList(),
       ),
       history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
     );
     await _persistActive();
   }
@@ -119,7 +145,12 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
       if (e.id != exerciseId) return e;
       return e.copyWith(sets: [...e.sets, WorkoutSet(id: newId())]);
     }).toList();
-    state = WorkoutLogState(active: a.copyWith(exercises: list), history: state.history);
+    state = WorkoutLogState(
+      active: a.copyWith(exercises: list),
+      history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
+    );
     await _persistActive();
   }
 
@@ -140,8 +171,48 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
       }).toList();
       return e.copyWith(sets: sets);
     }).toList();
-    state = WorkoutLogState(active: a.copyWith(exercises: list), history: state.history);
+    state = WorkoutLogState(
+      active: a.copyWith(exercises: list),
+      history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
+    );
     await _persistActive();
+  }
+
+  Future<void> toggleGuideFavorite(String catalogId) async {
+    if (guideEntryById(catalogId) == null) return;
+    final cur = List<String>.from(state.guideFavoriteIds);
+    if (cur.contains(catalogId)) {
+      cur.remove(catalogId);
+    } else {
+      cur.add(catalogId);
+    }
+    state = WorkoutLogState(
+      active: state.active,
+      history: state.history,
+      guideFavoriteIds: cur,
+      apiGuideFavorites: state.apiGuideFavorites,
+    );
+    await _workoutRepo.saveGuideFavorites(cur);
+  }
+
+  Future<void> toggleApiGuideFavorite(ApiGuideFavorite entry) async {
+    if (entry.id.isEmpty) return;
+    final list = List<ApiGuideFavorite>.from(state.apiGuideFavorites);
+    final i = list.indexWhere((e) => e.id == entry.id);
+    if (i >= 0) {
+      list.removeAt(i);
+    } else {
+      list.add(entry);
+    }
+    state = WorkoutLogState(
+      active: state.active,
+      history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: list,
+    );
+    await _workoutRepo.saveApiGuideFavorites(list);
   }
 
   Future<void> finishSession() async {
@@ -154,14 +225,24 @@ class WorkoutLogNotifier extends StateNotifier<WorkoutLogState> {
       exercises: a.exercises,
     );
     final hist = [...state.history, finished];
-    state = WorkoutLogState(active: null, history: hist);
+    state = WorkoutLogState(
+      active: null,
+      history: hist,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
+    );
     await _workoutRepo.saveHistory(hist);
     await _workoutRepo.saveDraft(null);
     await startNewSession(title: 'Workout');
   }
 
   Future<void> discardDraft() async {
-    state = WorkoutLogState(active: null, history: state.history);
+    state = WorkoutLogState(
+      active: null,
+      history: state.history,
+      guideFavoriteIds: state.guideFavoriteIds,
+      apiGuideFavorites: state.apiGuideFavorites,
+    );
     await _workoutRepo.saveDraft(null);
     await startNewSession(title: 'Workout');
   }

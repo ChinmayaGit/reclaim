@@ -22,6 +22,7 @@ class CommunityNotifier extends StateNotifier<AsyncValue<void>> {
     required String content,
     required String type,
     String? groupId,
+    String? imageUrl,
   }) async {
     final uid = _uid;
     if (uid == null || content.trim().isEmpty) return;
@@ -36,6 +37,7 @@ class CommunityNotifier extends StateNotifier<AsyncValue<void>> {
         heartedBy: const [],
         createdAt: DateTime.now(),
         groupId: groupId,
+        imageUrl: imageUrl,
       ),
     ));
   }

@@ -47,12 +47,66 @@ class AppUsageTrackedApp {
       );
 }
 
+/// Allowed hours for a specific app (same semantics as the old global window: Reclaim is
+/// available only while the current hour falls inside at least one entry’s window).
+class AppScheduleEntry {
+  const AppScheduleEntry({
+    required this.packageName,
+    required this.displayName,
+    required this.startHour,
+    required this.endHour,
+  });
+
+  final String packageName;
+  final String displayName;
+  /// Inclusive start hour 0–23.
+  final int startHour;
+  /// Exclusive end hour (same rule as the old global picker: current hour must be before end).
+  final int endHour;
+
+  Map<String, dynamic> toJson() => {
+        'p': packageName,
+        'n': displayName,
+        's': startHour,
+        'e': endHour,
+      };
+
+  factory AppScheduleEntry.fromJson(Map<String, dynamic> j) {
+    return AppScheduleEntry(
+      packageName: j['p'] as String? ?? '',
+      displayName: j['n'] as String? ?? 'App',
+      startHour: (j['s'] as num?)?.toInt() ?? 7,
+      endHour: (j['e'] as num?)?.toInt() ?? 22,
+    );
+  }
+
+  AppScheduleEntry copyWith({
+    String? packageName,
+    String? displayName,
+    int? startHour,
+    int? endHour,
+  }) =>
+      AppScheduleEntry(
+        packageName: packageName ?? this.packageName,
+        displayName: displayName ?? this.displayName,
+        startHour: startHour ?? this.startHour,
+        endHour: endHour ?? this.endHour,
+      );
+
+  /// Current hour [0..23] falls inside the allowed window (supports overnight spans).
+  static bool hourInAllowedWindow(int hour, int start, int end) {
+    if (start <= end) {
+      return hour >= start && hour < end;
+    }
+    return hour >= start || hour < end;
+  }
+}
+
 class FocusSettings {
   const FocusSettings({
     this.trackedAppUsage = const [],
     this.scheduleEnabled = false,
-    this.scheduleStartHour = 7,
-    this.scheduleEndHour = 22,
+    this.scheduleApps = const [],
     this.linkBlockingEnabled = false,
     this.blockedDomains = const [],
     this.snoozeUntil,
@@ -61,8 +115,9 @@ class FocusSettings {
   /// Apps to show usage for; optional per-app daily limit when [AppUsageTrackedApp.limitEnabled].
   final List<AppUsageTrackedApp> trackedAppUsage;
   final bool scheduleEnabled;
-  final int scheduleStartHour; // 0–23
-  final int scheduleEndHour; // 0–23
+  /// Per-app allowed time windows. Reclaim stays available if the current hour is inside
+  /// **any** window. Empty list + enabled → no time lock until the user adds apps.
+  final List<AppScheduleEntry> scheduleApps;
   final bool linkBlockingEnabled;
   final List<String> blockedDomains;
   final DateTime? snoozeUntil; // temporary override
@@ -70,21 +125,24 @@ class FocusSettings {
   bool get isSnoozed =>
       snoozeUntil != null && snoozeUntil!.isAfter(DateTime.now());
 
-  /// True when current time is outside the allowed schedule window.
+  /// True when schedule is on, at least one window exists, and the current hour is outside every window.
   bool get isOutsideSchedule {
     if (!scheduleEnabled) return false;
+    if (scheduleApps.isEmpty) return false;
     final hour = DateTime.now().hour;
-    if (scheduleStartHour <= scheduleEndHour) {
-      return hour < scheduleStartHour || hour >= scheduleEndHour;
-    }
-    return hour >= scheduleEndHour && hour < scheduleStartHour;
+    return !scheduleApps.any(
+      (e) => AppScheduleEntry.hourInAllowedWindow(
+        hour,
+        e.startHour,
+        e.endHour,
+      ),
+    );
   }
 
   FocusSettings copyWith({
     List<AppUsageTrackedApp>? trackedAppUsage,
     bool? scheduleEnabled,
-    int? scheduleStartHour,
-    int? scheduleEndHour,
+    List<AppScheduleEntry>? scheduleApps,
     bool? linkBlockingEnabled,
     List<String>? blockedDomains,
     DateTime? snoozeUntil,
@@ -93,8 +151,7 @@ class FocusSettings {
     return FocusSettings(
       trackedAppUsage: trackedAppUsage ?? this.trackedAppUsage,
       scheduleEnabled: scheduleEnabled ?? this.scheduleEnabled,
-      scheduleStartHour: scheduleStartHour ?? this.scheduleStartHour,
-      scheduleEndHour: scheduleEndHour ?? this.scheduleEndHour,
+      scheduleApps: scheduleApps ?? this.scheduleApps,
       linkBlockingEnabled: linkBlockingEnabled ?? this.linkBlockingEnabled,
       blockedDomains: blockedDomains ?? this.blockedDomains,
       snoozeUntil: clearSnooze ? null : (snoozeUntil ?? this.snoozeUntil),

@@ -9,9 +9,10 @@ import '../../../shared/widgets/streak_card.dart';
 import '../../../shared/widgets/mood_picker.dart';
 import '../../../features/tracker/domain/tracker_notifier.dart';
 import '../../../features/journal/domain/journal_notifier.dart';
-import '../../../features/health/domain/water_notifier.dart';
-import '../../../features/health/domain/sleep_notifier.dart';
+import '../../../features/discipline/data/habit_model.dart';
 import '../../../features/discipline/domain/discipline_notifier.dart';
+import '../../../features/discipline/presentation/add_habit_sheet.dart';
+import '../../../features/discipline/presentation/habit_icon_avatar.dart';
 import '../../../shared/models/journal_model.dart';
 import '../../../shared/models/tracker_model.dart';
 
@@ -395,8 +396,9 @@ class _MoodHistoryRow extends StatelessWidget {
               Text('Mood This Week',
                   style: Theme.of(context).textTheme.labelLarge),
               TextButton(
-                onPressed: () =>
-                    GoRouter.of(context).push(AppConstants.routeReports),
+                onPressed: () => GoRouter.of(context).push(
+                  '${AppConstants.routeDayRecap}?date=${AppConstants.dateKey(DateTime.now())}',
+                ),
                 child: const Text('View All'),
               ),
             ],
@@ -469,11 +471,11 @@ class _QuickActions extends StatelessWidget {
           AppColors.green600,
           AppConstants.routeDiscipline),
       _Action(
-          'Reports',
-          Icons.picture_as_pdf_outlined,
+          'Your day',
+          Icons.calendar_view_day_outlined,
           isDark ? AppColors.purple50Dk : AppColors.purple50,
           AppColors.purple600,
-          AppConstants.routeReports),
+          '${AppConstants.routeDayRecap}?date=${AppConstants.dateKey(DateTime.now())}'),
       _Action(
           'Crisis',
           Icons.sos_outlined,
@@ -937,15 +939,15 @@ class _RelapseSectionHome extends StatelessWidget {
 
 // ─── Check-in Calendar ────────────────────────────────────────────────────────
 
-class _CheckInCalendar extends StatefulWidget {
+class _CheckInCalendar extends ConsumerStatefulWidget {
   const _CheckInCalendar({required this.checkInDates});
   final List<String> checkInDates;
 
   @override
-  State<_CheckInCalendar> createState() => _CheckInCalendarState();
+  ConsumerState<_CheckInCalendar> createState() => _CheckInCalendarState();
 }
 
-class _CheckInCalendarState extends State<_CheckInCalendar> {
+class _CheckInCalendarState extends ConsumerState<_CheckInCalendar> {
   late DateTime _viewing;
   late Set<String> _dates;
 
@@ -978,6 +980,11 @@ class _CheckInCalendarState extends State<_CheckInCalendar> {
 
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  void _openDayDetail(String dateStr) {
+    if (!mounted) return;
+    context.push('${AppConstants.routeDayRecap}?date=$dateStr');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1084,23 +1091,31 @@ class _CheckInCalendarState extends State<_CheckInCalendar> {
                     return SizedBox(
                       width: 36,
                       height: 36,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: bg,
-                          shape: BoxShape.circle,
-                          border: isToday && !isChecked
-                              ? Border.all(color: AppColors.teal400, width: 1.5)
-                              : null,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$dayNum',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isChecked || isToday
-                                ? FontWeight.w700
-                                : FontWeight.w400,
-                            color: fg,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _openDayDetail(dateStr),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: bg,
+                              shape: BoxShape.circle,
+                              border: isToday && !isChecked
+                                  ? Border.all(
+                                      color: AppColors.teal400, width: 1.5)
+                                  : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$dayNum',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isChecked || isToday
+                                    ? FontWeight.w700
+                                    : FontWeight.w400,
+                                color: fg,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -1210,71 +1225,232 @@ class _AffirmationCard extends StatelessWidget {
 class _HealthHubSection extends ConsumerWidget {
   const _HealthHubSection();
 
+  static const double _cardWidth = 132;
+  static const double _addSlotWidth = 76;
+  static const double _rowHeight = 122;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final water = ref.watch(waterProvider);
-    final sleep = ref.watch(sleepProvider);
     final discipline = ref.watch(disciplineProvider);
+    final habits = discipline.habits;
+
+    void addHabit() => showAddHabitSheet(context, ref);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Health & Habits', style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            // Water card
-            Expanded(
-              child: _HealthCard(
-                icon: Icons.water_drop_outlined,
-                color: AppColors.blue400,
-                label: 'Water',
-                value: _fmtWater(water.totalTodayMl),
-                sub: 'of ${_fmtWater(water.goalMl)} goal',
-                progress: water.progress,
-                route: AppConstants.routeWater,
+        SizedBox(
+          height: _rowHeight,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            children: [
+              for (var i = 0; i < habits.length; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                SizedBox(
+                  width: _cardWidth,
+                  height: _rowHeight,
+                  child: _HealthHabitTile(habit: habits[i]),
+                ),
+              ],
+              SizedBox(width: habits.isEmpty ? 0 : 10),
+              SizedBox(
+                width: _addSlotWidth,
+                height: _rowHeight,
+                child: _HealthAddHabitSlot(onTap: addHabit),
               ),
-            ),
-            const SizedBox(width: 10),
-            // Sleep card
-            Expanded(
-              child: _HealthCard(
-                icon: Icons.bedtime_outlined,
-                color: AppColors.purple400,
-                label: 'Sleep',
-                value: sleep.lastNightHours != null
-                    ? '${sleep.lastNightHours!.toStringAsFixed(1)}h'
-                    : '— h',
-                sub: 'goal ${sleep.goalHours.toStringAsFixed(0)}h',
-                progress: sleep.lastNightHours != null
-                    ? (sleep.lastNightHours! / sleep.goalHours).clamp(0.0, 1.0)
-                    : 0,
-                route: AppConstants.routeSleep,
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Discipline card
-            Expanded(
-              child: _HealthCard(
-                icon: Icons.checklist_outlined,
-                color: AppColors.green400,
-                label: 'Habits',
-                value: '${discipline.completedCount}/${discipline.totalCount}',
-                sub: discipline.streak > 0
-                    ? '${discipline.streak}d streak'
-                    : 'start today',
-                progress: discipline.progress,
-                route: AppConstants.routeDiscipline,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
+}
 
-  String _fmtWater(int ml) =>
-      ml >= 1000 ? '${(ml / 1000).toStringAsFixed(1)}L' : '${ml}ml';
+/// One habit in the Health & Habits row — tap body for details, check to toggle.
+class _HealthHabitTile extends ConsumerWidget {
+  const _HealthHabitTile({required this.habit});
+
+  final HabitItem habit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final disc = ref.watch(disciplineProvider);
+    final count = disc.countFor(habit.id);
+    final goal = habit.dailyGoal.clamp(1, 999);
+    final satisfied = disc.isHabitSatisfied(habit);
+    final color = Color(habit.colorValue);
+    final progress = goal > 0 ? (count / goal).clamp(0.0, 1.0) : 0.0;
+
+    return Material(
+      color: context.colSurface,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: _HealthHubSection._rowHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color:
+                satisfied ? color.withValues(alpha: 0.55) : context.colBorder,
+            width: satisfied ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: InkWell(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(13),
+                  right: Radius.circular(4),
+                ),
+                onTap: () => context.push(
+                  '${AppConstants.routeHabitDetail}?id=${habit.id}',
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 4, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Row(
+                        children: [
+                          HabitIconAvatar(
+                            habit: habit,
+                            size: 28,
+                            done: satisfied,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: Text(
+                            habit.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              color: context.colText,
+                            ),
+                          ),
+                        ),
+                      ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 3,
+                          backgroundColor: color.withValues(alpha: 0.12),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(color),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        goal > 1
+                            ? '$count/$goal · ${habit.pointsWeight} pt max'
+                            : (satisfied
+                                ? 'Done · ${habit.pointsWeight} pt'
+                                : '${habit.pointsWeight} pt · details'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: context.colTextHint,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => ref
+                    .read(disciplineProvider.notifier)
+                    .tapHabit(habit.id),
+                onLongPress: () => ref
+                    .read(disciplineProvider.notifier)
+                    .decrementHabit(habit.id),
+                borderRadius: const BorderRadius.horizontal(
+                  right: Radius.circular(13),
+                ),
+                child: SizedBox(
+                  width: 40,
+                  child: Tooltip(
+                    message: satisfied
+                        ? (goal > 1
+                            ? 'Tap +1 · long-press undo'
+                            : 'Tap to undo')
+                        : (goal > 1 ? 'Tap to log' : 'Mark done'),
+                    child: Icon(
+                      satisfied
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 22,
+                      color: satisfied ? color : context.colTextHint,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Trailing control in the Health & Habits row — scrolls right with the cards.
+class _HealthAddHabitSlot extends StatelessWidget {
+  const _HealthAddHabitSlot({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: context.colSurface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: _HealthHubSection._rowHeight,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.teal600.withValues(alpha: 0.45),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add, size: 30, color: AppColors.teal600),
+              const SizedBox(height: 6),
+              Text(
+                'Add',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: context.colTextSec,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Discipline & training (gym / habits / focus) ─────────────────────────────
@@ -1406,70 +1582,3 @@ class _DisciplineTrackCard extends StatelessWidget {
   }
 }
 
-class _HealthCard extends StatelessWidget {
-  const _HealthCard({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.value,
-    required this.sub,
-    required this.progress,
-    required this.route,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String label, value, sub, route;
-  final double progress;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push(route),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.colSurface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.colBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 16),
-                const Spacer(),
-                Icon(Icons.chevron_right, color: context.colTextHint, size: 14),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: context.colText)),
-            Text(sub,
-                style: TextStyle(fontSize: 10, color: context.colTextSec)),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 4,
-                backgroundColor: color.withValues(alpha: 0.12),
-                valueColor: AlwaysStoppedAnimation(color),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: context.colTextHint,
-                    fontWeight: FontWeight.w500)),
-          ],
-        ),
-      ),
-    );
-  }
-}

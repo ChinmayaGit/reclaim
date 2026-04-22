@@ -48,6 +48,7 @@ class ResourceItem {
     this.videoId,
     this.videoUrl,
     this.videoDescription,
+    this.videoTopic,
   });
 
   final String id;
@@ -76,4 +77,16 @@ class ResourceItem {
   /// Fallback external URL — only used when videoId is null.
   final String? videoUrl;
   final String? videoDescription;
+  /// In-app video category (Videos tab chips). e.g. `stories`, `therapy`, `body`.
+  final String? videoTopic;
 }
+
+/// Topic keys for the Videos tab (see [ResourceItem.videoTopic]).
+const kVideoTopics = [
+  ('all', 'All'),
+  ('stories', 'Stories'),
+  ('therapy', 'Therapy skills'),
+  ('body', 'Body & nervous system'),
+  ('motivation', 'Motivation'),
+  ('science', 'Science & education'),
+];

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../resources/presentation/video_embed_screen.dart';
 import '../data/craving_content.dart';
 
 class CravingShieldScreen extends StatefulWidget {
@@ -75,12 +76,39 @@ class _CravingShieldScreenState extends State<CravingShieldScreen>
 
 // ─── Videos Tab ───────────────────────────────────────────────────────────────
 
-class _VideosTab extends StatelessWidget {
+class _VideosTab extends StatefulWidget {
   const _VideosTab({required this.videos});
   final List<CravingVideo> videos;
 
   @override
+  State<_VideosTab> createState() => _VideosTabState();
+}
+
+class _VideosTabState extends State<_VideosTab> {
+  String _categoryId = 'all';
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  List<CravingVideo> get _filtered {
+    final q = _search.text.trim().toLowerCase();
+    return widget.videos.where((v) {
+      if (_categoryId != 'all' && v.categoryId != _categoryId) return false;
+      if (q.isEmpty) return true;
+      return v.title.toLowerCase().contains(q) ||
+          v.description.toLowerCase().contains(q) ||
+          v.searchQuery.toLowerCase().contains(q) ||
+          cravingVideoCategoryLabel(v.categoryId).toLowerCase().contains(q);
+    }).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final filtered = _filtered;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -91,12 +119,75 @@ class _VideosTab extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text(
-            '📺 These videos show the real consequences of addiction. Watching before acting on a craving is one of the most effective tools in relapse prevention.',
+            '📺 Curated by category. Search narrows the list; opening a card runs a focused YouTube search (or in-app video when available).',
             style: TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
           ),
         ),
-        const SizedBox(height: 16),
-        ...videos.map((v) => _VideoCard(video: v)),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _search,
+          onChanged: (_) => setState(() {}),
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          cursorColor: AppColors.teal400,
+          decoration: InputDecoration(
+            hintText: 'Search titles, topics, or phrases…',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.06),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.teal400),
+            ),
+            prefixIcon: const Icon(Icons.search, color: Colors.white38, size: 22),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: kCravingVideoCategories.map((c) {
+              final sel = _categoryId == c.$1;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(c.$2, style: const TextStyle(fontSize: 12)),
+                  selected: sel,
+                  onSelected: (_) => setState(() => _categoryId = c.$1),
+                  selectedColor: AppColors.teal400.withValues(alpha: 0.25),
+                  checkmarkColor: AppColors.teal400,
+                  labelStyle: TextStyle(
+                    color: sel ? Colors.white : Colors.white54,
+                    fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (filtered.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'No videos match your search in this category.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 13),
+              ),
+            ),
+          )
+        else
+          ...filtered.map((v) => _VideoCard(video: v)),
       ],
     );
   }
@@ -106,18 +197,37 @@ class _VideoCard extends StatelessWidget {
   const _VideoCard({required this.video});
   final CravingVideo video;
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
+  void _open(BuildContext context) {
+    final id = video.youtubeVideoId?.trim();
+    if (id != null && id.isNotEmpty) {
+      Navigator.push<void>(
         context,
-        MaterialPageRoute(
+        MaterialPageRoute<void>(
+          builder: (_) => VideoEmbedScreen(
+            videoId: id,
+            title: video.title,
+            description: video.description,
+          ),
+        ),
+      );
+    } else {
+      Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(
           builder: (_) => _YoutubeSearchPage(
             title: video.title,
             url: video.youtubeSearchUrl,
           ),
         ),
-      ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasEmbed = video.youtubeVideoId != null && video.youtubeVideoId!.isNotEmpty;
+    return GestureDetector(
+      onTap: () => _open(context),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -134,7 +244,32 @@ class _VideoCard extends StatelessWidget {
                 color: AppColors.teal900,
                 borderRadius: BorderRadius.horizontal(left: Radius.circular(14)),
               ),
-              child: const Icon(Icons.play_circle_filled_rounded, color: AppColors.teal400, size: 36),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(Icons.play_circle_filled_rounded,
+                      color: AppColors.teal400, size: 36),
+                  if (hasEmbed)
+                    Positioned(
+                      bottom: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'In-app',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -149,6 +284,15 @@ class _VideoCard extends StatelessWidget {
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      cravingVideoCategoryLabel(video.categoryId),
+                      style: TextStyle(
+                        color: AppColors.teal400.withValues(alpha: 0.9),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 4),

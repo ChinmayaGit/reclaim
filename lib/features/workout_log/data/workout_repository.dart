@@ -1,11 +1,14 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'exercise_db_models.dart';
 import 'workout_models.dart';
 
 class WorkoutRepository {
   static const _kHistory = 'workout_history_json';
   static const _kDraft = 'workout_draft_json';
+  static const _kGuideFavorites = 'workout_guide_favorite_ids';
+  static const _kApiGuideFavorites = 'workout_api_guide_favorites_json';
 
   Future<List<FinishedWorkout>> loadHistory() async {
     final p = await SharedPreferences.getInstance();
@@ -43,5 +46,52 @@ class WorkoutRepository {
     } else {
       await p.setString(_kDraft, jsonEncode(w.toJson()));
     }
+  }
+
+  Future<List<String>> loadGuideFavorites() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getStringList(_kGuideFavorites) ?? [];
+  }
+
+  Future<void> saveGuideFavorites(List<String> ids) async {
+    final p = await SharedPreferences.getInstance();
+    final seen = <String>{};
+    final dedup = <String>[];
+    for (final id in ids) {
+      if (id.isEmpty || seen.contains(id)) continue;
+      seen.add(id);
+      dedup.add(id);
+    }
+    await p.setStringList(_kGuideFavorites, dedup);
+  }
+
+  Future<List<ApiGuideFavorite>> loadApiGuideFavorites() async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getString(_kApiGuideFavorites);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((e) => ApiGuideFavorite.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where((f) => f.id.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveApiGuideFavorites(List<ApiGuideFavorite> list) async {
+    final p = await SharedPreferences.getInstance();
+    final seen = <String>{};
+    final out = <ApiGuideFavorite>[];
+    for (final f in list) {
+      if (f.id.isEmpty || seen.contains(f.id)) continue;
+      seen.add(f.id);
+      out.add(f);
+    }
+    await p.setString(
+      _kApiGuideFavorites,
+      jsonEncode(out.map((e) => e.toJson()).toList()),
+    );
   }
 }

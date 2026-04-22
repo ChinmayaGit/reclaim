@@ -34,6 +34,7 @@ class CommunityPost {
     required this.heartedBy,
     required this.createdAt,
     this.groupId,
+    this.imageUrl,
   });
 
   final String id;
@@ -44,6 +45,7 @@ class CommunityPost {
   final List<String> heartedBy;
   final DateTime createdAt;
   final String? groupId;
+  final String? imageUrl;
 
   int get hearts => heartedBy.length;
   bool isHeartedBy(String uid) => heartedBy.contains(uid);
@@ -58,6 +60,7 @@ class CommunityPost {
       heartedBy: List<String>.from(j['heartedBy'] as List? ?? []),
       createdAt: (j['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       groupId: j['groupId'] as String?,
+      imageUrl: j['imageUrl'] as String?,
     );
   }
 
@@ -69,6 +72,7 @@ class CommunityPost {
     'heartedBy': heartedBy,
     'createdAt': Timestamp.fromDate(createdAt),
     if (groupId != null) 'groupId': groupId,
+    if (imageUrl != null && imageUrl!.isNotEmpty) 'imageUrl': imageUrl,
   };
 }
 

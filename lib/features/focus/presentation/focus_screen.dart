@@ -1,5 +1,9 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../domain/focus_notifier.dart';
@@ -9,6 +13,25 @@ import '../data/notification_prefs.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../services/local_notification_service.dart';
 import '../../../shared/constants/app_constants.dart';
+
+String _fmtScheduleHourLabel(int h) {
+  final suf = h < 12 ? 'AM' : 'PM';
+  final disp = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+  return '$disp:00 $suf';
+}
+
+Future<void> _pickScheduleHourOnly(
+  BuildContext context,
+  int current,
+  ValueChanged<int> onHour,
+) async {
+  final picked = await showTimePicker(
+    context: context,
+    initialTime: TimeOfDay(hour: current, minute: 0),
+    helpText: 'Select hour',
+  );
+  if (picked != null) onHour(picked.hour);
+}
 
 class FocusScreen extends ConsumerWidget {
   const FocusScreen({super.key});
@@ -40,32 +63,8 @@ class FocusScreen extends ConsumerWidget {
           const _TrackedAppsSection(),
           const SizedBox(height: 20),
 
-          // ── App Schedule ────────────────────────────────────────────────
-          _SectionCard(
-            icon: Icons.schedule_outlined,
-            iconColor: AppColors.purple600,
-            iconBg: context.colTint(AppColors.purple50, AppColors.purple50Dk),
-            title: 'App Schedule',
-            subtitle: 'Only allow access during specific hours',
-            trailing: Switch(
-              value: settings.scheduleEnabled,
-              onChanged: (v) => ref
-                  .read(focusSettingsProvider.notifier)
-                  .setSchedule(enabled: v),
-            ),
-            child: settings.scheduleEnabled
-                ? _SchedulePicker(
-                    startHour: settings.scheduleStartHour,
-                    endHour: settings.scheduleEndHour,
-                    onStartChanged: (h) => ref
-                        .read(focusSettingsProvider.notifier)
-                        .setSchedule(enabled: true, startHour: h),
-                    onEndChanged: (h) => ref
-                        .read(focusSettingsProvider.notifier)
-                        .setSchedule(enabled: true, endHour: h),
-                  )
-                : null,
-          ),
+          // ── App Schedule (per-app allowed windows) ───────────────────────
+          const _ScheduleAppsSection(),
           const SizedBox(height: 12),
 
           // ── Link Blocker (DNS VPN) ──────────────────────────────────────
@@ -244,21 +243,6 @@ class _SchedulePicker extends StatelessWidget {
   final int startHour, endHour;
   final ValueChanged<int> onStartChanged, onEndChanged;
 
-  String _fmt(int h) {
-    final suf = h < 12 ? 'AM' : 'PM';
-    final disp = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-    return '$disp:00 $suf';
-  }
-
-  Future<void> _pick(BuildContext context, int current, ValueChanged<int> cb) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: current, minute: 0),
-      helpText: 'Select hour',
-    );
-    if (picked != null) cb(picked.hour);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -266,8 +250,9 @@ class _SchedulePicker extends StatelessWidget {
         Expanded(
           child: _TimeButton(
             label: 'Available from',
-            time: _fmt(startHour),
-            onTap: () => _pick(context, startHour, onStartChanged),
+            time: _fmtScheduleHourLabel(startHour),
+            onTap: () =>
+                _pickScheduleHourOnly(context, startHour, onStartChanged),
           ),
         ),
         Padding(
@@ -277,8 +262,8 @@ class _SchedulePicker extends StatelessWidget {
         Expanded(
           child: _TimeButton(
             label: 'Until',
-            time: _fmt(endHour),
-            onTap: () => _pick(context, endHour, onEndChanged),
+            time: _fmtScheduleHourLabel(endHour),
+            onTap: () => _pickScheduleHourOnly(context, endHour, onEndChanged),
           ),
         ),
       ],
@@ -702,6 +687,76 @@ class _CravingShieldCard extends ConsumerWidget {
                       ),
                     )),
 
+                const SizedBox(height: 16),
+                Text(
+                  'Reminder image',
+                  style: TextStyle(fontSize: 12, color: context.colTextSec),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Optional — your photo appears on Craving Shield notifications '
+                  '(Android big picture; iOS attachment).',
+                  style: TextStyle(fontSize: 11, color: context.colTextHint, height: 1.35),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (prefs.cravingReminderImagePath != null &&
+                        File(prefs.cravingReminderImagePath!).existsSync()) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          File(prefs.cravingReminderImagePath!),
+                          width: 52,
+                          height: 52,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final img = await ImagePicker().pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 1200,
+                                imageQuality: 88,
+                              );
+                              if (img == null || !context.mounted) return;
+                              final dir = await getApplicationDocumentsDirectory();
+                              final out =
+                                  File('${dir.path}/craving_notif_reminder.jpg');
+                              await File(img.path).copy(out.path);
+                              if (!context.mounted) return;
+                              await notifier
+                                  .setCravingReminderImagePath(out.path);
+                            },
+                            icon: const Icon(Icons.add_photo_alternate_outlined,
+                                size: 16),
+                            label: Text(
+                              prefs.cravingReminderImagePath == null
+                                  ? 'Choose image'
+                                  : 'Change image',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          if (prefs.cravingReminderImagePath != null)
+                            TextButton(
+                              onPressed: () =>
+                                  notifier.setCravingReminderImagePath(null),
+                              child: const Text('Remove'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
@@ -821,6 +876,322 @@ Future<void> _openTrackedAppsPicker(BuildContext context, WidgetRef ref) async {
     ),
     builder: (_) => const _TrackedAppsPickerSheet(),
   );
+}
+
+Future<void> _openScheduleAppsPicker(BuildContext context, WidgetRef ref) async {
+  if (!await UsageChannel.hasPermission()) {
+    if (!context.mounted) return;
+    final ok = await _showUsageAccessSheet(context);
+    if (!ok || !context.mounted) return;
+    await ref.read(usageNotifierProvider.notifier).refresh();
+  }
+  if (!context.mounted) return;
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => const _ScheduleAppsPickerSheet(),
+  );
+}
+
+class _ScheduleAppsSection extends ConsumerWidget {
+  const _ScheduleAppsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(focusSettingsProvider);
+    final snap = ref.watch(usageNotifierProvider);
+    final focusN = ref.read(focusSettingsProvider.notifier);
+    final scheduled = settings.scheduleApps;
+
+    return _SectionCard(
+      icon: Icons.schedule_outlined,
+      iconColor: AppColors.purple600,
+      iconBg: context.colTint(AppColors.purple50, AppColors.purple50Dk),
+      title: 'App schedule',
+      subtitle:
+          'Add apps, then set allowed hours — Reclaim stays open when the current hour is inside any window',
+      trailing: Switch(
+        value: settings.scheduleEnabled,
+        onChanged: focusN.setScheduleEnabled,
+      ),
+      child: settings.scheduleEnabled
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Each row is one app (or “All apps” from an older setup). '
+                  'Allowed hours use the same “from → until” rule as before: '
+                  'the end hour is exclusive (e.g. 7 → 22 means 7:00 up to but not including 22:00).',
+                  style: TextStyle(fontSize: 12, color: context.colTextSec, height: 1.45),
+                ),
+                const SizedBox(height: 12),
+                if (!snap.hasUsagePermission)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      'Grant usage access to pick installed apps for scheduling.',
+                      style: TextStyle(fontSize: 12, color: context.colTextSec, height: 1.45),
+                    ),
+                  ),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      if (!snap.hasUsagePermission) {
+                        final ok = await _showUsageAccessSheet(context);
+                        if (!ok || !context.mounted) return;
+                        await ref.read(usageNotifierProvider.notifier).refresh();
+                        if (!context.mounted) return;
+                      }
+                      await _openScheduleAppsPicker(context, ref);
+                    },
+                    icon: const Icon(Icons.add_outlined, size: 18),
+                    label: Text(scheduled.isEmpty ? 'Add apps' : 'Add more apps'),
+                  ),
+                ),
+                if (scheduled.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Text(
+                      'No apps yet. Tap Add apps, turn on an app, then set its allowed time range.',
+                      style: TextStyle(fontSize: 12, color: context.colTextSec, height: 1.45),
+                    ),
+                  )
+                else ...[
+                  const SizedBox(height: 14),
+                  ...scheduled.map((e) => _ScheduledAppRow(entry: e)),
+                ],
+              ],
+            )
+          : null,
+    );
+  }
+}
+
+class _ScheduledAppRow extends ConsumerWidget {
+  const _ScheduledAppRow({required this.entry});
+  final AppScheduleEntry entry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = ref.read(focusSettingsProvider.notifier);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: context.colTint(AppColors.purple50, AppColors.purple50Dk),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.purple400.withValues(alpha: 0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: context.colText,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Remove',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(Icons.close, size: 18, color: context.colTextHint),
+                  onPressed: () => n.removeScheduleApp(entry.packageName),
+                ),
+              ],
+            ),
+            if (entry.packageName.isNotEmpty && entry.packageName != '*')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  entry.packageName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10, color: context.colTextHint),
+                ),
+              ),
+            _SchedulePicker(
+              startHour: entry.startHour,
+              endHour: entry.endHour,
+              onStartChanged: (h) => n.setScheduleAppHours(
+                entry.packageName,
+                startHour: h,
+                endHour: entry.endHour,
+              ),
+              onEndChanged: (h) => n.setScheduleAppHours(
+                entry.packageName,
+                startHour: entry.startHour,
+                endHour: h,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleAppsPickerSheet extends ConsumerStatefulWidget {
+  const _ScheduleAppsPickerSheet();
+
+  @override
+  ConsumerState<_ScheduleAppsPickerSheet> createState() =>
+      _ScheduleAppsPickerSheetState();
+}
+
+class _ScheduleAppsPickerSheetState extends ConsumerState<_ScheduleAppsPickerSheet> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final snap = ref.watch(usageNotifierProvider);
+    final scheduled =
+        ref.watch(focusSettingsProvider.select((s) => s.scheduleApps));
+    final scheduledPkgs = {for (final e in scheduled) e.packageName};
+    final q = _search.text.trim().toLowerCase();
+    final apps = snap.appsSorted;
+    final filtered = q.isEmpty
+        ? apps
+        : apps
+            .where(
+              (s) =>
+                  s.appName.toLowerCase().contains(q) ||
+                  s.packageName.toLowerCase().contains(q),
+            )
+            .toList();
+
+    final h = MediaQuery.sizeOf(context).height;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: h * 0.72,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.colBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Text(
+                'Add app to schedule',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  hintText: 'Search apps',
+                  prefixIcon: Icon(Icons.search),
+                  isDense: true,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: !snap.hasUsagePermission
+                  ? Center(
+                      child: Text(
+                        'Usage access required.',
+                        style: TextStyle(color: context.colTextSec),
+                      ),
+                    )
+                  : filtered.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No apps match.',
+                            style: TextStyle(color: context.colTextSec),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, i) {
+                            final s = filtered[i];
+                            final on = scheduledPkgs.contains(s.packageName);
+                            return SwitchListTile(
+                              dense: true,
+                              title: Text(
+                                s.appName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colText,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${_fmtAppUsageSeconds(s.secondsToday)} · ${s.packageName}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: context.colTextHint,
+                                ),
+                              ),
+                              value: on,
+                              onChanged: (v) async {
+                                final n =
+                                    ref.read(focusSettingsProvider.notifier);
+                                if (v) {
+                                  await n.addScheduleApp(
+                                    packageName: s.packageName,
+                                    displayName: s.appName,
+                                  );
+                                } else {
+                                  await n.removeScheduleApp(s.packageName);
+                                }
+                              },
+                            );
+                          },
+                        ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Done'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _TrackedAppsSection extends ConsumerWidget {

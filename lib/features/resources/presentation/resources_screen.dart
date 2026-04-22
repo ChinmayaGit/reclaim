@@ -175,7 +175,7 @@ class _ResourcesScreenState extends ConsumerState<ResourcesScreen>
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ResourceList extends StatelessWidget {
+class _ResourceList extends StatefulWidget {
   const _ResourceList({
     required this.type,
     required this.category,
@@ -187,28 +187,25 @@ class _ResourceList extends StatelessWidget {
   final bool isPremium;
 
   @override
-  Widget build(BuildContext context) {
-    final items = ResourcesData.byType(type, category: category);
+  State<_ResourceList> createState() => _ResourceListState();
+}
 
-    if (items.isEmpty) {
-      return _EmptyState(type: type, category: category);
-    }
+class _ResourceListState extends State<_ResourceList> {
+  String _videoTopic = 'all';
+  final _videoSearch = TextEditingController();
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        final item = items[i];
-        final locked = item.isPremium && !isPremium;
-        return _ResourceCard(
-          resource: item,
-          locked: locked,
-          onTap: locked
-              ? () => _showUpgradePrompt(context)
-              : () => _openResource(context, item),
-        );
-      },
+  @override
+  void dispose() {
+    _videoSearch.dispose();
+    super.dispose();
+  }
+
+  List<ResourceItem> _filteredItems() {
+    return ResourcesData.byType(
+      widget.type,
+      category: widget.category,
+      videoTopic: widget.type == 'video' ? _videoTopic : 'all',
+      videoSearch: widget.type == 'video' ? _videoSearch.text : '',
     );
   }
 
@@ -251,6 +248,74 @@ class _ResourceList extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _filteredItems();
+
+    final list = items.isEmpty
+        ? _EmptyState(type: widget.type, category: widget.category)
+        : ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) {
+              final item = items[i];
+              final locked = item.isPremium && !widget.isPremium;
+              return _ResourceCard(
+                resource: item,
+                locked: locked,
+                onTap: locked
+                    ? () => _showUpgradePrompt(context)
+                    : () => _openResource(context, item),
+              );
+            },
+          );
+
+    if (widget.type != 'video') return list;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: TextField(
+            controller: _videoSearch,
+            decoration: InputDecoration(
+              hintText: 'Search videos (title, description, topics)…',
+              prefixIcon: const Icon(Icons.search, size: 22),
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        SizedBox(
+          height: 46,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            children: kVideoTopics.map((t) {
+              final sel = _videoTopic == t.$1;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(t.$2, style: const TextStyle(fontSize: 12)),
+                  selected: sel,
+                  onSelected: (_) => setState(() => _videoTopic = t.$1),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        Expanded(child: list),
+      ],
     );
   }
 }

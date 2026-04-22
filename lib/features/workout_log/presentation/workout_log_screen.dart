@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../data/workout_models.dart';
 import '../domain/workout_notifier.dart';
+import 'exercise_guide_panel.dart';
 
 class WorkoutLogScreen extends ConsumerWidget {
   const WorkoutLogScreen({super.key});
@@ -68,6 +69,8 @@ class WorkoutLogScreen extends ConsumerWidget {
             icon: const Icon(Icons.add),
             label: const Text('Add exercise'),
           ),
+          const SizedBox(height: 24),
+          const ExerciseGuidePanel(),
           const SizedBox(height: 80),
         ],
       ),

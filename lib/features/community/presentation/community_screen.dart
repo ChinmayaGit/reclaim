@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -20,6 +24,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
 
   static const _typeTabs = [
     ('all',      'All',        '💬'),
+    ('expert',   'Expert',     '🎓'),
     ('win',      'Wins',       '🌟'),
     ('story',    'Stories',    '📖'),
     ('question', 'Questions',  '❓'),
@@ -77,21 +82,13 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
   }
 
   void _showNewPostSheet(BuildContext context) {
-    showModalBottomSheet(
+    final messenger = ScaffoldMessenger.of(context);
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: context.colSurface,
       builder: (ctx) => _NewPostSheet(
-        onPost: (content, type) async {
-          Navigator.pop(ctx);
-          final messenger = ScaffoldMessenger.of(context);
-          await ref.read(communityNotifierProvider.notifier)
-              .createPost(content: content, type: type);
-          messenger.showSnackBar(const SnackBar(
-            content: Text('Shared anonymously with the community.'),
-            backgroundColor: AppColors.teal600,
-          ));
-        },
+        scaffoldMessenger: messenger,
       ),
     );
   }
@@ -271,6 +268,29 @@ class _PostCard extends StatelessWidget {
               color: context.colText,
             ),
           ),
+          if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: post.imageUrl!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  height: 120,
+                  alignment: Alignment.center,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  height: 80,
+                  alignment: Alignment.center,
+                  child: Icon(Icons.broken_image_outlined,
+                      color: context.colTextHint),
+                ),
+              ),
+            ),
+          ],
 
           // Actions
           const SizedBox(height: 12),
@@ -305,30 +325,76 @@ class _PostCard extends StatelessWidget {
 
 // ─── New post bottom sheet ────────────────────────────────────────────────────
 
-class _NewPostSheet extends StatefulWidget {
-  const _NewPostSheet({required this.onPost});
-  final Future<void> Function(String content, String type) onPost;
+class _NewPostSheet extends ConsumerStatefulWidget {
+  const _NewPostSheet({required this.scaffoldMessenger});
+  final ScaffoldMessengerState scaffoldMessenger;
 
   @override
-  State<_NewPostSheet> createState() => _NewPostSheetState();
+  ConsumerState<_NewPostSheet> createState() => _NewPostSheetState();
 }
 
-class _NewPostSheetState extends State<_NewPostSheet> {
+class _NewPostSheetState extends ConsumerState<_NewPostSheet> {
   final _ctrl = TextEditingController();
   String _type = 'story';
   bool _posting = false;
+  XFile? _pickedImage;
 
   static const _types = [
     ('win',      '🌟 Win',          'Celebrate a milestone or progress'),
     ('story',    '📖 Story',        'Share your experience'),
     ('question', '❓ Question',     'Ask the community'),
     ('support',  '🤝 Need Support', 'Ask for encouragement'),
+    ('expert',   '🎓 Expert',       'Evidence-based tips & professional perspective'),
   ];
 
   @override
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  Future<String?> _uploadLocalImage(String path) async {
+    final uid = ref.read(currentUserProvider)?.uid;
+    if (uid == null) return null;
+    final storage = ref.read(storageProvider);
+    final name = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final refFile = storage.ref().child('community_posts').child(uid).child(name);
+    await refFile.putFile(File(path));
+    return refFile.getDownloadURL();
+  }
+
+  Future<void> _submit() async {
+    if (_posting || _ctrl.text.trim().isEmpty) return;
+    setState(() => _posting = true);
+    try {
+      String? imageUrl;
+      final path = _pickedImage?.path;
+      if (path != null && path.isNotEmpty) {
+        imageUrl = await _uploadLocalImage(path);
+      }
+      await ref.read(communityNotifierProvider.notifier).createPost(
+            content: _ctrl.text,
+            type: _type,
+            imageUrl: imageUrl,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.scaffoldMessenger.showSnackBar(const SnackBar(
+        content: Text('Shared anonymously with the community.'),
+        backgroundColor: AppColors.teal600,
+      ));
+    } catch (e) {
+      if (mounted) {
+        widget.scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Could not post: $e'),
+            backgroundColor: AppColors.coral600,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _posting = false);
+    }
   }
 
   @override
@@ -422,18 +488,33 @@ class _NewPostSheetState extends State<_NewPostSheet> {
               fillColor: context.colTint(AppColors.slate50, AppColors.slate50Dk),
             ),
           ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _posting
+                ? null
+                : () async {
+                    final file = await ImagePicker().pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 1600,
+                      imageQuality: 88,
+                    );
+                    if (file != null) setState(() => _pickedImage = file);
+                  },
+            icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+            label: Text(
+              _pickedImage == null
+                  ? 'Add image (optional)'
+                  : 'Image attached — tap to change',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
           const SizedBox(height: 14),
 
           // Post button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _posting || _ctrl.text.trim().isEmpty
-                  ? null
-                  : () async {
-                      setState(() => _posting = true);
-                      await widget.onPost(_ctrl.text, _type);
-                    },
+              onPressed: _posting || _ctrl.text.trim().isEmpty ? null : _submit,
               child: _posting
                   ? const SizedBox(
                       width: 20, height: 20,
@@ -463,6 +544,7 @@ class _EmptyFeed extends StatelessWidget {
       'story'    => ('📖', 'stories'),
       'question' => ('❓', 'questions'),
       'support'  => ('🤝', 'support posts'),
+      'expert'   => ('🎓', 'expert posts'),
       _          => ('💬', 'posts'),
     };
 

@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../services/local_notification_service.dart';
 import '../data/habit_model.dart';
 import '../data/discipline_repository.dart';
 
@@ -13,6 +15,7 @@ class DisciplineNotifier extends StateNotifier<DisciplineState> {
     await _repo.pruneOld();
     state = await _repo.load();
     _checkStreakReset();
+    await LocalNotificationService.instance.syncHabitReminders(state.habits);
   }
 
   void _checkStreakReset() {
@@ -25,23 +28,45 @@ class DisciplineNotifier extends StateNotifier<DisciplineState> {
         .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
         .inDays;
     if (diff > 1) {
-      // Streak broken
       state = state.copyWith(streak: 0);
       _repo.saveStreak(0, today);
     }
   }
 
-  Future<void> toggleHabit(String id) async {
-    final done = Set<String>.from(state.completedToday);
-    if (done.contains(id)) {
-      done.remove(id);
-    } else {
-      done.add(id);
-    }
-    state = state.copyWith(completedToday: done);
-    await _repo.saveCompleted(done);
+  Future<void> _persistTodayProgress() async {
+    final today = DateTime.now();
+    await _repo.saveProgressFor(today, state.habitProgressToday);
+  }
 
-    // Update streak when all done
+  /// One tap: binary habits toggle; repeating habits add one until the daily goal.
+  Future<void> tapHabit(String id) async {
+    HabitItem? habit;
+    for (final h in state.habits) {
+      if (h.id == id) {
+        habit = h;
+        break;
+      }
+    }
+    if (habit == null) return;
+
+    final map = Map<String, int>.from(state.habitProgressToday);
+    final c = map[id] ?? 0;
+    final g = habit.dailyGoal.clamp(1, 999);
+    int next;
+    if (g == 1) {
+      next = c >= 1 ? 0 : 1;
+    } else {
+      if (c >= g) return;
+      next = c + 1;
+    }
+    if (next <= 0) {
+      map.remove(id);
+    } else {
+      map[id] = next;
+    }
+    state = state.copyWith(habitProgressToday: map);
+    await _persistTodayProgress();
+
     if (state.allDone) {
       final today = DateTime.now();
       final todayStr =
@@ -54,24 +79,68 @@ class DisciplineNotifier extends StateNotifier<DisciplineState> {
     }
   }
 
+  /// Undo one step for repeating habits, or clear a single-shot habit.
+  Future<void> decrementHabit(String id) async {
+    HabitItem? habit;
+    for (final h in state.habits) {
+      if (h.id == id) {
+        habit = h;
+        break;
+      }
+    }
+    if (habit == null) return;
+
+    final map = Map<String, int>.from(state.habitProgressToday);
+    final c = map[id] ?? 0;
+    if (c <= 0) return;
+    final next = c - 1;
+    if (next <= 0) {
+      map.remove(id);
+    } else {
+      map[id] = next;
+    }
+    state = state.copyWith(habitProgressToday: map);
+    await _persistTodayProgress();
+  }
+
+  /// @nodoc Kept for older call sites; delegates to [tapHabit].
+  Future<void> toggleHabit(String id) => tapHabit(id);
+
   Future<void> addHabit(HabitItem habit) async {
     final updated = [...state.habits, habit];
     state = state.copyWith(habits: updated);
     await _repo.saveHabits(updated);
+    await LocalNotificationService.instance.syncHabitReminders(updated);
   }
 
   Future<void> removeHabit(String id) async {
     final updated = state.habits.where((h) => h.id != id).toList();
-    final done = Set<String>.from(state.completedToday)..remove(id);
-    state = state.copyWith(habits: updated, completedToday: done);
+    final map = Map<String, int>.from(state.habitProgressToday)..remove(id);
+    state = state.copyWith(habits: updated, habitProgressToday: map);
     await _repo.saveHabits(updated);
-    await _repo.saveCompleted(done);
+    await _persistTodayProgress();
+    await LocalNotificationService.instance.syncHabitReminders(updated);
   }
 
   Future<void> reorderHabits(List<HabitItem> habits) async {
     state = state.copyWith(habits: habits);
     await _repo.saveHabits(habits);
+    await LocalNotificationService.instance.syncHabitReminders(habits);
   }
+
+  /// Habits fully satisfied on [day] (local date), for calendar / history UI.
+  Future<Set<String>> completedIdsOn(DateTime day) async {
+    final map = await _repo.loadProgressFor(day);
+    final out = <String>{};
+    for (final h in state.habits) {
+      final c = map[h.id] ?? 0;
+      if (c >= h.dailyGoal.clamp(1, 999)) out.add(h.id);
+    }
+    return out;
+  }
+
+  Future<Map<String, int>> progressMapOn(DateTime day) =>
+      _repo.loadProgressFor(day);
 }
 
 final disciplineProvider =

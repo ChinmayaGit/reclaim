@@ -9,10 +9,31 @@ class WaterRepository {
 
   String _todayKey() {
     final d = DateTime.now();
-    return '$_kPrefix${d.year}-${_p(d.month)}-${_p(d.day)}';
+    return _dateKey(d);
   }
 
+  String _dateKey(DateTime d) =>
+      '$_kPrefix${d.year}-${_p(d.month)}-${_p(d.day)}';
+
   String _p(int v) => v.toString().padLeft(2, '0');
+
+  /// Water log for a specific calendar day (if still in SharedPreferences).
+  Future<List<WaterEntry>> loadEntriesForDay(DateTime day) async {
+    final p = await SharedPreferences.getInstance();
+    final d = DateTime(day.year, day.month, day.day);
+    final raw = p.getString(_dateKey(d));
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      return WaterState.entriesFromJson(raw);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<int> loadGoalMl() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getInt(_kGoal) ?? 3000;
+  }
 
   Future<WaterState> load() async {
     final p = await SharedPreferences.getInstance();

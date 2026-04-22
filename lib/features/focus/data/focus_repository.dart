@@ -8,6 +8,7 @@ class FocusRepository {
   static const _keySchedule = 'focus_schedule_enabled';
   static const _keyStartHour = 'focus_start_hour';
   static const _keyEndHour = 'focus_end_hour';
+  static const _keyScheduleApps = 'focus_schedule_apps_json';
   static const _keyLinkBlock = 'focus_link_block_enabled';
   static const _keyDomains = 'focus_blocked_domains';
 
@@ -25,11 +26,36 @@ class FocusRepository {
             .toList();
       } catch (_) {}
     }
+
+    List<AppScheduleEntry> scheduleApps = [];
+    final rawSched = p.getString(_keyScheduleApps);
+    if (rawSched != null && rawSched.isNotEmpty) {
+      try {
+        final list = jsonDecode(rawSched) as List<dynamic>;
+        scheduleApps = list
+            .map((e) => AppScheduleEntry.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ))
+            .toList();
+      } catch (_) {}
+    }
+
+    // Migrate old single global window into one schedule row.
+    if (scheduleApps.isEmpty && (p.getBool(_keySchedule) ?? false)) {
+      scheduleApps = [
+        AppScheduleEntry(
+          packageName: '*',
+          displayName: 'All apps',
+          startHour: p.getInt(_keyStartHour) ?? 7,
+          endHour: p.getInt(_keyEndHour) ?? 22,
+        ),
+      ];
+    }
+
     return FocusSettings(
       trackedAppUsage: tracked,
       scheduleEnabled: p.getBool(_keySchedule) ?? false,
-      scheduleStartHour: p.getInt(_keyStartHour) ?? 7,
-      scheduleEndHour: p.getInt(_keyEndHour) ?? 22,
+      scheduleApps: scheduleApps,
       linkBlockingEnabled: p.getBool(_keyLinkBlock) ?? false,
       blockedDomains: domains,
     );
@@ -39,11 +65,12 @@ class FocusRepository {
     final p = await SharedPreferences.getInstance();
     final trackedJson =
         jsonEncode(s.trackedAppUsage.map((e) => e.toJson()).toList());
+    final schedJson =
+        jsonEncode(s.scheduleApps.map((e) => e.toJson()).toList());
     await Future.wait([
       p.setString(_keyTrackedApps, trackedJson),
       p.setBool(_keySchedule, s.scheduleEnabled),
-      p.setInt(_keyStartHour, s.scheduleStartHour),
-      p.setInt(_keyEndHour, s.scheduleEndHour),
+      p.setString(_keyScheduleApps, schedJson),
       p.setBool(_keyLinkBlock, s.linkBlockingEnabled),
       p.setStringList(_keyDomains, s.blockedDomains),
     ]);

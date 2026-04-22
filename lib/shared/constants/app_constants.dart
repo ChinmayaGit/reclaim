@@ -85,7 +85,6 @@ class AppConstants {
   static const String routeCommunity = '/community';
   static const String routeSessions = '/sessions';
   static const String routeCrisis = '/crisis';
-  static const String routeReports = '/reports';
   static const String routeSettings = '/settings';
   static const String routeAdmin = '/admin';
   static const String routeUpgrade = '/upgrade';
@@ -100,4 +99,10 @@ class AppConstants {
   static const String routeSleep      = '/sleep';
   static const String routeDiscipline = '/discipline';
   static const String routeWorkoutLog = '/workout-log';
+  static const String routeHabitDetail = '/habit-detail';
+  static const String routeDayRecap = '/day-recap';
+
+  /// `yyyy-MM-dd` for day recap query parameter.
+  static String dateKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
