@@ -29,7 +29,7 @@
   </tr>
   <tr>
     <td><img src="https://raw.githubusercontent.com/ChinmayaGit/reclaim/main/pics/photo_2026-05-11_01-33-46%20(9).jpg" width="200"/></td>
-    <td><img src="https://raw.githubusercontent.com/ChinmayaGit/reclaim/main/pics/photo_2026-05-11_01-33-47.jpg.jpg" width="200"/></td>
+    <td><img src="https://raw.githubusercontent.com/ChinmayaGit/reclaim/main/pics/photo_2026-05-11_01-33-47.jpg" width="200"/></td>
     <td><img src="https://raw.githubusercontent.com/ChinmayaGit/reclaim/main/pics/photo_2026-05-11_01-33-46%20(11).jpg" width="200"/></td>
     <td><img src="https://raw.githubusercontent.com/ChinmayaGit/reclaim/main/pics/photo_2026-05-11_01-33-46%20(12).jpg" width="200"/></td>
   </tr>
