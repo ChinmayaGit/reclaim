@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(flutter pub:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(Get-ChildItem -Path \"e:\\\\Projects\\\\Flutter_Android\\\\reclaim\" -Name)"
     ]
   }
 }
