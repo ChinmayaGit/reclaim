@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 /// Flutter bridge to the native DNS-filter VPN service.
 class VpnChannel {
-  static const _ch = MethodChannel('com.chinu.reclaim/vpn');
+  static const _ch = MethodChannel('com.chinulabs.reclaim/vpn');
 
   /// Whether the system has already granted VPN consent for this app.
   static Future<bool> hasPermission() async {

@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:58387309805:android:92ab2bbe049c3e369458e4",
+        "mobilesdk_app_id": "1:58387309805:android:b535d6d6166cc0979458e4",
         "android_client_info": {
-          "package_name": "com.chinu.reclaim"
+          "package_name": "com.chinulabs.reclaim"
         }
       },
       "oauth_client": [
         {
-          "client_id": "58387309805-r9a0acvhllhp0ce7e48j2dtbq38hhiln.apps.googleusercontent.com",
+          "client_id": "58387309805-cg9c6edgbve08dgcjrk21eu4m3tc7g5o.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.chinu.reclaim",
-            "certificate_hash": "0fb118888105c9dbf63968027deca89c24bc8867"
+            "package_name": "com.chinulabs.reclaim",
+            "certificate_hash": "e6c181cd08bec9797cb42bff6a212e5158b89d58"
           }
         },
         {

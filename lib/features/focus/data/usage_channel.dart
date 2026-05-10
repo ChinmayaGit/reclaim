@@ -15,7 +15,7 @@ class AppUsageStat {
 }
 
 class UsageChannel {
-  static const _ch = MethodChannel('com.chinu.reclaim/usage');
+  static const _ch = MethodChannel('com.chinulabs.reclaim/usage');
 
   static Future<bool> hasPermission() async {
     try {

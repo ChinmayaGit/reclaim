@@ -46,7 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '58387309805',
     projectId: 'reclaim-274ca',
     storageBucket: 'reclaim-274ca.firebasestorage.app',
-    iosBundleId: 'com.chinu.reclaim',
+    iosBundleId: 'com.chinulabs.reclaim',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -55,6 +55,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '58387309805',
     projectId: 'reclaim-274ca',
     storageBucket: 'reclaim-274ca.firebasestorage.app',
-    iosBundleId: 'com.chinu.reclaim',
+    iosBundleId: 'com.chinulabs.reclaim',
   );
 }

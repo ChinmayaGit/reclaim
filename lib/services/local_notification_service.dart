@@ -49,6 +49,12 @@ class LocalNotificationService {
       onDidReceiveBackgroundNotificationResponse: _onBackgroundNotification,
     );
 
+    if (Platform.isAndroid) {
+      final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await androidImpl?.requestExactAlarmsPermission();
+    }
+
     // Handle payload stored by background handler or app-launch-via-notification
     final prefs = await SharedPreferences.getInstance();
     final pending = prefs.getString('_notif_pending_route');

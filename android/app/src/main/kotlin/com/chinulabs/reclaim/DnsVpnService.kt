@@ -1,11 +1,13 @@
-package com.chinu.reclaim
+package com.chinulabs.reclaim
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -30,8 +32,8 @@ import kotlin.concurrent.thread
 class DnsVpnService : VpnService() {
 
     companion object {
-        const val ACTION_START   = "com.chinu.reclaim.VPN_START"
-        const val ACTION_STOP    = "com.chinu.reclaim.VPN_STOP"
+        const val ACTION_START   = "com.chinulabs.reclaim.VPN_START"
+        const val ACTION_STOP    = "com.chinulabs.reclaim.VPN_STOP"
         const val EXTRA_DOMAINS  = "blocked_domains"
 
         private const val VPN_ADDR   = "10.111.0.2"   // TUN client address
@@ -88,7 +90,12 @@ class DnsVpnService : VpnService() {
         running = false
         try { tun?.close() } catch (_: Exception) {}
         tun = null
-        stopForeground(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
     }
 
@@ -263,6 +270,15 @@ class DnsVpnService : VpnService() {
             .setOngoing(true)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopIntent)
             .build()
-        startForeground(NOTIF_ID, notif)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIF_ID,
+                notif,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            startForeground(NOTIF_ID, notif)
+        }
     }
 }

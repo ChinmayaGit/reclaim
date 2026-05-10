@@ -68,10 +68,17 @@ class HabitIconAvatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.26),
       ),
       alignment: Alignment.center,
-      child: Icon(
-        IconData(habit.iconCode, fontFamily: 'MaterialIcons'),
-        color: isDone ? Colors.white : color,
-        size: size * 0.47,
+      // Use Text + Material font so release icon tree-shaking succeeds (dynamic IconData is rejected).
+      child: Text(
+        String.fromCharCode(habit.iconCode),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontFamily: 'MaterialIcons',
+          inherit: false,
+          color: isDone ? Colors.white : color,
+          fontSize: size * 0.47,
+          height: 1.0,
+        ),
       ),
     );
   }

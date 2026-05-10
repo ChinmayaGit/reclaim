@@ -1,4 +1,4 @@
-package com.chinu.reclaim
+package com.chinulabs.reclaim
 
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
@@ -6,7 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.VpnService
+import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -14,8 +16,8 @@ import java.util.Calendar
 
 class MainActivity : FlutterActivity() {
 
-    private val usageChannel = "com.chinu.reclaim/usage"
-    private val vpnChannel = "com.chinu.reclaim/vpn"
+    private val usageChannel = "com.chinulabs.reclaim/usage"
+    private val vpnChannel = "com.chinulabs.reclaim/vpn"
 
     private var pendingVpnResult: MethodChannel.Result? = null
 
@@ -145,13 +147,24 @@ class MainActivity : FlutterActivity() {
             action = DnsVpnService.ACTION_START
             putStringArrayListExtra(DnsVpnService.EXTRA_DOMAINS, ArrayList(domains))
         }
-        startService(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, intent)
+        } else {
+            @Suppress("DEPRECATION")
+            startService(intent)
+        }
     }
 
     private fun stopVpnService() {
-        startService(Intent(this, DnsVpnService::class.java).apply {
+        val intent = Intent(this, DnsVpnService::class.java).apply {
             action = DnsVpnService.ACTION_STOP
-        })
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, intent)
+        } else {
+            @Suppress("DEPRECATION")
+            startService(intent)
+        }
     }
 
     private fun isVpnRunning(): Boolean = VpnService.prepare(this) == null
